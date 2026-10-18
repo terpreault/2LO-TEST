@@ -1,0 +1,29 @@
+{
+  "name": "2LO TEST — Three Worlds",
+  "short_name": "2LO TEST",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5FAFB",
+  "theme_color": "#F5FAFB",
+  "description": "Version de test 2LO pour installation iPhone et essai sans connexion. Données fictives stockées sur cet appareil uniquement.",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    }
+  ]
+}

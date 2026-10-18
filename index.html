@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="fr" data-mode="water">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F5FAFB">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="2LO TEST">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css?v=6010">
+  <script src="config.js?v=6010"></script>
+  <title>2LO TEST — Three Worlds V6.0.1</title>
+</head>
+<body>
+
+<div class="launch-splash" id="launchSplash" aria-hidden="true">
+  <div class="launch-inner">
+    <img src="icons/icon-192.png" alt="">
+    <div class="launch-name">2LO</div>
+    <div class="launch-kicker">SUIVI D’HYDRATATION</div>
+    <p>2 L. Chaque jour.</p>
+  </div>
+</div>
+
+<div class="auth" id="auth">
+  <div class="auth-card">
+    <img class="auth-logo" src="icons/icon-192.png" alt="2LO">
+    <div class="auth-wordmark">2LO</div>
+    <div class="brand-kicker">SUIVI D’HYDRATATION</div>
+    <p id="authIntro">Connecte-toi pour retrouver ton suivi d’hydratation sur tous tes appareils.</p>
+    <div id="configWarning" class="setup-warning hidden">Supabase n’est pas encore configuré. L’app fonctionne en mode local de démonstration.</div>
+    <div class="form-grid" id="authFields">
+      <div><label for="email">Adresse e-mail</label><input class="input" id="email" type="email" autocomplete="email"></div>
+      <div><label for="password">Mot de passe</label><input class="input" id="password" type="password" autocomplete="current-password"></div>
+    </div>
+    <div class="auth-actions">
+      <button class="primary" id="loginBtn">Se connecter</button>
+      <button class="secondary" id="signupBtn">Créer le compte</button>
+      <button class="secondary hidden" id="demoBtn">Continuer en mode démo</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-shell">
+  <!-- Décors interactifs propres à chaque univers (Water, Coca-Cola, Monster). -->
+  <div class="water-ambience" aria-hidden="true"><div class="water-light"></div><div class="water-sparks"></div></div>
+  <div class="soda-ambience" aria-hidden="true"><div class="soda-fog"></div><div class="soda-embers"></div><div class="soda-flash"></div></div>
+  <!-- Shared across all four screens; vector mini wordmark until final logos arrive. -->
+  <div class="world-switcher" id="worldSwitcher">
+    <button class="world-switch-button" id="worldSwitchButton" type="button" aria-haspopup="true"
+      aria-expanded="false" aria-controls="worldMenu" aria-label="Changer d’univers">
+      <img class="world-active-logo" id="worldActiveLogo" src="assets/logo-2lo-aqua.svg" alt="" aria-hidden="true">
+      <svg class="world-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4.5 6 3.5 3.5L11.5 6"/></svg>
+    </button>
+    <div class="world-menu hidden" id="worldMenu" role="group" aria-label="Choisir un univers">
+      <div class="world-menu-heading" id="worldMenuHeading">Choisir un univers</div>
+      <button class="world-option" data-world="water" type="button" aria-pressed="true">
+        <img class="world-option-logo" src="assets/logo-2lo-aqua.svg" alt="" aria-hidden="true">
+        <span class="world-option-description"><strong>Water</strong><small id="worldWaterDesc">Hydratation</small></span><span class="world-option-check" aria-hidden="true">✓</span>
+      </button>
+      <button class="world-option" data-world="coca" type="button" aria-pressed="false">
+        <img class="world-option-logo" src="assets/logo-2lo-inferno.svg" alt="" aria-hidden="true">
+        <span class="world-option-description"><strong>Coca-Cola</strong><small id="worldCocaDesc">En préparation</small></span><span class="world-option-check" aria-hidden="true">✓</span>
+      </button>
+      <button class="world-option" data-world="monster" type="button" aria-pressed="false">
+        <img class="world-option-logo" src="assets/logo-2lo-toxic.svg" alt="" aria-hidden="true">
+        <span class="world-option-description"><strong>Monster</strong><small id="worldMonsterDesc">En préparation</small></span><span class="world-option-check" aria-hidden="true">✓</span>
+      </button>
+    </div>
+  </div>
+  <main class="main-content">
+
+    <!-- TODAY -->
+    <section class="screen active" data-screen="today">
+      <header class="today-topbar" aria-hidden="true"></header>
+
+      <div class="home-heading">
+        <div class="water-head-copy">
+          <span class="water-demo-badge">DÉMO V6.0.1 · STOCKAGE LOCAL</span>
+          <h1>Water</h1>
+          <p class="water-invitation">Reste hydraté, reste au top.</p>
+        </div>
+      </div>
+
+      <section class="gauge-section" aria-label="Progression d’hydratation">
+        <div class="hydration-gauge" id="hydrationGauge" style="--fill:0">
+          <svg class="gauge-ring" viewBox="0 0 300 300" aria-hidden="true">
+            <circle class="gauge-track" cx="150" cy="150" r="145"></circle>
+            <circle class="gauge-progress" id="gaugeProgress" cx="150" cy="150" r="145"></circle>
+            <g class="gauge-orbit" id="waterGaugeOrbit"><circle class="gauge-dot" id="gaugeDot" cx="150" cy="5" r="6"></circle></g>
+          </svg>
+          <div class="gauge-liquid-clip">
+            <div class="gauge-liquid" id="gaugeLiquid"><span class="wave wave-a"></span><span class="wave wave-b"></span><i class="bubble b1"></i><i class="bubble b2"></i><i class="bubble b3"></i><i class="bubble b4"></i></div>
+          </div>
+          <div class="gauge-copy">
+            <strong id="currentLitres">0,0 L</strong>
+            <span class="gauge-goal-label">Objectif : <span id="goalLitres">2,0 L</span></span>
+          </div>
+        </div>
+        <div class="gauge-percent" id="percent">0 %</div>
+        <div class="gauge-caption" id="todayProgressLabel">Progression du jour</div>
+        <div class="goal-message" id="goalMessage"><span class="drop-small">●</span><span>Encore 2,0 L aujourd’hui</span></div>
+      </section>
+
+      <div class="quick-grid" id="homeQuickGrid">
+        <button class="quick" data-ml="150" type="button"><span class="glass-icon"><i></i></span><strong>150 ml</strong></button>
+        <button class="quick" data-ml="250" type="button"><span class="glass-icon"><i></i></span><strong>250 ml</strong></button>
+        <button class="quick" data-ml="330" type="button"><span class="glass-icon"><i></i></span><strong>330 ml</strong></button>
+        <button class="quick" data-ml="500" type="button"><span class="glass-icon"><i></i></span><strong>500 ml</strong></button>
+      </div>
+
+      <button class="add-water-main" id="openAdd" type="button"><span>＋</span><strong id="addWaterMainText">Ajouter de l’eau</strong></button>
+
+      <div class="home-info-grid">
+        <button class="home-info-card" type="button" data-target-settings>
+          <span class="info-icon bell-icon">⌁</span>
+          <span><small id="nextLabel">Prochain rappel</small><strong id="nextReminderTime">--:--</strong><em id="nextReminderRelative">—</em></span>
+        </button>
+        <button class="home-info-card" type="button" id="lastDrinkCard">
+          <span class="info-icon glass-mini">▱</span>
+          <span><small id="lastDrinkLabel">Dernière prise</small><strong id="lastDrinkAmount">—</strong><em id="lastDrinkTime">—</em></span>
+        </button>
+      </div>
+
+      <div class="soda-view" id="sodaToday">
+        <header class="soda-heading"><span class="soda-demo-badge">DÉMO V6.0.1 · STOCKAGE LOCAL</span><h1 id="sodaName">Coca-Cola</h1><p>Moins de soda, à ton rythme.</p></header>
+        <div class="soda-gauge" id="sodaGauge">
+          <div class="soda-gauge-inner">
+            <div class="soda-liquid" id="sodaGaugeLiquid"><i></i><i></i><i></i></div>
+            <div class="soda-gauge-text"><strong id="sodaTodayAmount">0 ml</strong><span id="sodaLimitText">Limite personnelle : 1,0 L</span></div>
+          </div>
+          <!-- Le même cadran SVG que Water : anneau et sphère progressent ensemble. -->
+          <svg class="soda-orbit-ring" viewBox="0 0 300 300" aria-hidden="true">
+            <circle class="soda-ring-track" cx="150" cy="150" r="145"></circle>
+            <circle class="soda-ring-progress" id="sodaRingProgress" cx="150" cy="150" r="145"></circle>
+            <g class="gauge-orbit" id="sodaGaugeOrbit"><circle class="soda-ring-dot" cx="150" cy="5" r="6"></circle></g>
+          </svg>
+        </div>
+        <p class="soda-percentage" id="sodaGaugePercent">0 % de la limite</p>
+        <div class="soda-limit-note" id="sodaLimitMessage">Aucune consommation aujourd’hui.</div>
+        <div class="soda-quick-grid"><button type="button" data-soda-add="330"><span class="soda-can" aria-hidden="true"></span><strong>330 ml</strong></button><button type="button" data-soda-add="500"><span class="soda-can soda-can-tall" aria-hidden="true"></span><strong>500 ml</strong></button></div>
+        <button class="soda-cta" id="sodaOpenSheet" type="button">＋ Ajouter une consommation</button>
+        <div class="soda-info-grid"><article class="soda-info-card"><small>Dépensé aujourd’hui</small><strong id="sodaSpendToday">0,00 €</strong><em>Prix enregistré pour chaque prise</em></article><button class="soda-info-card soda-last" id="sodaLastCard" type="button"><small>Dernière prise</small><strong id="sodaLastAmount">—</strong><em id="sodaLastTime">Aucune prise</em></button></div>
+      </div>
+
+          <div class="world-placeholder" id="worldPlaceholderToday" aria-live="polite"></div>
+    </section>
+
+    <!-- PROGRESS -->
+    <section class="screen" data-screen="progress">
+      <header class="page-title-row"><h1 id="progressTitle">Progression</h1></header>
+
+      <section class="insight-hero" aria-label="Résumé de l’hydratation">
+        <div class="insight-hero-top"><span class="insight-label">💧 &nbsp;HYDRATATION</span><span class="insight-period">MOYENNE / JOUR</span></div>
+        <div class="insight-hero-main"><strong id="waterHeroAverage">0 ml</strong><span class="insight-hero-icon" aria-hidden="true">↗</span></div>
+        <p id="waterHeroMessage">Chaque verre compte. Continue à ton rythme.</p>
+      </section>
+
+      <div class="segmented" id="periodSelector">
+        <button class="segment active" data-period="week" type="button" id="periodWeek">7 jours</button>
+        <button class="segment" data-period="month" type="button" id="periodMonth">Mois</button>
+        <button class="segment" data-period="year" type="button" id="periodYear">Année</button>
+      </div>
+
+      <div class="period-row"><button class="period-arrow" id="periodPrev" type="button">‹</button><strong id="periodLabel">—</strong><button class="period-arrow" id="periodNext" type="button">›</button></div>
+
+      <div class="chart-card">
+        <div class="progress-chart-heading"><strong>Consommation d’eau</strong><small>Moyenne par jour sur Mois / Année</small></div>
+        <div class="chart-y-label top" id="chartMaxLabel">3,0 L</div>
+        <div class="chart-y-label mid" id="chartGoalAxisLabel">2,0 L</div>
+        <div class="chart-y-label low" id="chartHalfLabel">1,0 L</div>
+        <div class="chart-y-label zero">0 L</div>
+        <div class="goal-threshold" id="goalThreshold"><span id="chartGoalLabel">Objectif 2,0 L</span></div>
+        <div class="bar-chart" id="progressChart"></div>
+      </div>
+
+      <div class="stats-two">
+        <div class="metric-card"><span class="metric-symbol drop">●</span><small id="avgLabel">Moyenne quotidienne</small><strong id="avgValue">0,0 L</strong></div>
+        <div class="metric-card"><span class="metric-symbol target">◎</span><small id="goalsReachedLabel">Objectifs atteints</small><strong id="goalsReachedValue">0 / 7 jours</strong></div>
+      </div>
+
+      <div class="wide-metric-card"><span class="metric-symbol coral">◆</span><div><small id="streakLabel">Série actuelle</small><strong><span id="streakValue">0</span> <span id="daysLabel">jours</span></strong></div></div>
+      <div class="wide-metric-card"><span class="metric-symbol trend">↗</span><div><small id="weekComparisonLabel">Cette semaine</small><strong id="weekComparisonValue">—</strong><em id="weekComparisonSub">par rapport à la semaine précédente</em></div></div>
+      <div class="wide-metric-card"><span class="metric-symbol star">★</span><div><small id="bestDayLabel">Meilleur jour</small><strong id="bestDayValue">—</strong></div></div>
+
+      <div class="soda-view" id="sodaProgress">
+        <section class="insight-hero" aria-label="Résumé de la consommation">
+          <div class="insight-hero-top"><span class="insight-label" id="sodaHeroBrand">COCA-COLA</span><span class="insight-period">MOYENNE / JOUR</span></div>
+          <div class="insight-hero-main"><strong id="sodaHeroAverage">0 ml</strong><span class="insight-hero-icon" aria-hidden="true">↘</span></div>
+          <p id="sodaHeroMessage">Moins de soda, à ton rythme.</p>
+        </section>
+        <div class="soda-period-controls" aria-label="Période des statistiques"><button type="button" class="soda-period-btn active" data-soda-period="week">7 jours</button><button type="button" class="soda-period-btn" data-soda-period="month">Mois</button><button type="button" class="soda-period-btn" data-soda-period="year">Année</button></div>
+        <div class="soda-calendar-nav"><button type="button" id="sodaPeriodPrev" aria-label="Période précédente">‹</button><strong id="sodaPeriodLabel"></strong><button type="button" id="sodaPeriodNext" aria-label="Période suivante">›</button></div>
+        <div class="soda-plot-card">
+          <div class="progress-chart-heading"><strong>Consommation de soda</strong><small>Moyenne par jour sur Mois / Année</small></div>
+          <div class="soda-chart-viewport"><div class="soda-limit-line" id="sodaLimitLine"><span id="sodaChartLimit">Limite personnelle</span></div><div class="soda-bars" id="sodaBars"></div></div>
+          <div class="progress-chart-legend"><span class="progress-legend-dot"></span>Consommation <span class="progress-legend-dash"></span>Limite personnelle</div>
+        </div>
+        <div class="soda-metric-grid"><article><span class="progress-metric-icon" aria-hidden="true">◷</span><small>Moyenne quotidienne</small><strong id="sodaAverage">0 ml</strong></article><article><span class="progress-metric-icon" aria-hidden="true">◎</span><small>Jours sous ou à la limite</small><strong id="sodaUnderLimit">0 / 0 jours</strong></article><article><span class="progress-metric-icon" aria-hidden="true">✓</span><small>Jours sans soda</small><strong id="sodaWithout">0</strong></article><article><span class="progress-metric-icon" aria-hidden="true">€</span><small>Dépensé sur la période</small><strong id="sodaSpendPeriod">0,00 €</strong></article></div>
+        <p class="soda-footnote">Une journée sans soda est comptée positivement. Tu peux ajuster ta limite dans Réglages.</p>
+      </div>
+
+          <div class="world-placeholder" id="worldPlaceholderProgress" aria-live="polite"></div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="screen" data-screen="history">
+      <header class="page-title-row"><div><h1 id="historyTitle">Historique</h1><p id="historyLead">Suivi quotidien</p></div></header>
+
+      <section class="history-hero" aria-label="Bilan mensuel de l’hydratation">
+        <div class="history-hero-heading"><span class="history-eyebrow">💧 &nbsp;EAU · BILAN DU MOIS</span><span class="history-period-tag">MOIS SÉLECTIONNÉ</span></div>
+        <div class="history-hero-value"><strong id="waterHistoryHeroValue">0 jour</strong><span class="history-hero-icon" aria-hidden="true">◎</span></div>
+        <p id="waterHistoryHeroText">Objectif atteint · aucun jour enregistré</p>
+        <div class="history-hero-sub"><span>Volume enregistré</span><strong id="waterHistoryVolume">0,0 L</strong></div>
+      </section>
+      <div class="calendar-card history-calendar-panel">
+        <div class="calendar-head"><button class="calendar-arrow" id="prevMonth" type="button" aria-label="Mois précédent">‹</button><strong id="historyMonthLabel"></strong><button class="calendar-arrow" id="nextMonth" type="button" aria-label="Mois suivant">›</button></div>
+        <div class="weekday-row" id="weekdayRow"></div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <div class="history-legend"><span><i class="history-legend-dot low"></i>Consommation</span><span><i class="history-legend-dot high"></i>Objectif atteint</span></div>
+      </div>
+
+      <div class="day-detail-card history-day-panel" id="dayDetailCard">
+        <div class="day-detail-top">
+          <div><small id="selectedDateLabel">—</small><strong id="selectedDayTotal">0,0 L</strong></div>
+          <div class="day-score"><span class="score-ring" id="dayScoreRing"><i></i></span><strong id="selectedDayPercent">0 %</strong><small id="ofGoalLabel">de l’objectif</small></div>
+        </div>
+        <p class="history-day-status" id="waterDayStatus">Aucune prise enregistrée ce jour-là.</p>
+        <div class="day-mini-stats">
+          <div><span>▱</span><strong id="selectedDrinkCount">0</strong><small id="takesLabel">prises</small></div>
+          <div><span>◷</span><small id="firstLabel">Première</small><strong id="selectedFirstTime">—</strong></div>
+          <div><span>◷</span><small id="lastLabel">Dernière</small><strong id="selectedLastTime">—</strong></div>
+        </div>
+        <div class="selected-day-logs" id="selectedDayLogs"></div>
+      </div>
+
+      <div class="soda-view" id="sodaHistory">
+        <section class="history-hero" aria-label="Bilan mensuel des sodas">
+          <div class="history-hero-heading"><span class="history-eyebrow" id="sodaHistoryEyebrow">COCA-COLA · BILAN DU MOIS</span><span class="history-period-tag">MOIS SÉLECTIONNÉ</span></div>
+          <div class="history-hero-value"><strong id="sodaHistoryHeroValue">0 jour</strong><span class="history-hero-icon" aria-hidden="true">↘</span></div>
+          <p id="sodaHistoryHeroText">Jours suivis sous ou à la limite</p>
+          <div class="history-hero-sub"><span>Dépenses enregistrées</span><strong id="sodaHistoryHeroSpend">0,00 €</strong></div>
+        </section>
+        <div class="soda-history-card history-calendar-panel">
+          <div class="soda-calendar-nav"><button type="button" id="sodaHistoryPrev" aria-label="Mois précédent">‹</button><strong id="sodaHistoryMonth"></strong><button type="button" id="sodaHistoryNext" aria-label="Mois suivant">›</button></div>
+          <div class="soda-calendar-weekdays" id="sodaWeekdays"></div>
+          <div class="soda-calendar-grid" id="sodaCalendar"></div>
+          <div class="history-legend"><span><i class="history-legend-dot low"></i>Consommation</span><span><i class="history-legend-dot high"></i>Limite dépassée</span></div>
+        </div>
+        <div class="soda-history-card history-day-panel">
+          <div class="day-detail-top"><div><small id="sodaSelectedDate"></small><strong id="sodaSelectedTotal">0 ml</strong></div>
+            <div class="day-score"><span class="score-ring" id="sodaDayScoreRing"><i></i></span><strong id="sodaSelectedPercent">0 %</strong><small>de la limite</small></div>
+          </div>
+          <p class="history-day-status" id="sodaDayStatus">Aucune prise enregistrée ce jour-là.</p>
+          <div class="day-mini-stats">
+            <div><span>▱</span><strong id="sodaDayCount">0</strong><small>prises</small></div>
+            <div><span>◎</span><strong id="sodaDayLimit">0 ml</strong><small>limite</small></div>
+            <div><span>€</span><strong id="sodaSelectedSpend">0,00 €</strong><small>dépensé</small></div>
+          </div>
+          <div class="selected-day-logs" id="sodaDayItems"></div>
+        </div>
+      </div>
+
+          <div class="world-placeholder" id="worldPlaceholderHistory" aria-live="polite"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="screen" data-screen="settings">
+      <header class="page-title-row"><div><h1 id="settingsTitle">Réglages</h1><p id="settingsLead">Personnalisez votre suivi</p></div></header>
+      <section class="settings-hero settings-hero-water" aria-label="Présentation des réglages Water">
+        <div class="settings-hero-head"><span class="settings-eyebrow">💧 WATER · AQUA PARADISE</span><span class="settings-hero-pill">TON UNIVERS</span></div>
+        <strong>Ton hydratation, à ton rythme.</strong>
+        <p>Personnalise ton objectif et tes rappels.</p>
+        <div class="settings-hero-remark"><span>◎ Objectif quotidien</span><b id="settingsWaterHeroGoal">2,0 L</b></div>
+      </section>
+
+      <section class="settings-group settings-primary-card">
+        <div class="settings-group-title"><span>◎</span><strong id="dailyGoalTitle">Objectif quotidien</strong><b id="goalHeaderValue">2,0 L</b></div>
+        <div class="custom-goal-row"><label for="goalInput" id="customGoalLabel">Objectif personnalisé</label><input class="input compact-input" id="goalInput" type="number" min="500" step="50" max="20000" inputmode="numeric"><span>ml</span></div>
+        <div class="goal-presets" id="goalPresets">
+          <button type="button" data-goal="1500">1,5 L</button><button type="button" data-goal="2000">2,0 L</button><button type="button" data-goal="2500">2,5 L</button><button type="button" data-goal="3000">3,0 L</button>
+        </div>
+        <p class="settings-help">Le nouvel objectif est enregistré automatiquement.</p>
+      </section>
+
+      <section class="settings-group settings-reminders-card">
+        <div class="settings-group-title"><span>♢</span><strong id="remindersTitle">Rappels</strong><button class="toggle" id="reminderToggle" type="button" role="switch" aria-checked="false"><i></i></button></div>
+        <div class="settings-row"><label id="wakeLabel" for="wakeInput">Heure de début</label><input class="plain-time" id="wakeInput" type="time"></div>
+        <div class="settings-row"><label id="sleepLabel" for="sleepInput">Heure de fin</label><input class="plain-time" id="sleepInput" type="time"></div>
+        <div class="settings-row"><label id="intervalLabel" for="intervalInput">Fréquence</label><select class="plain-select" id="intervalInput"><option value="30">30 min</option><option value="45">45 min</option><option value="60">Toutes les heures</option><option value="90">Toutes les 1 h 30</option><option value="120">Toutes les 2 heures</option></select></div>
+        <button class="settings-save" id="saveSettings" type="button">Enregistrer les rappels</button>
+        <button class="settings-test" id="testPushBtn" type="button">Envoyer une notification test</button>
+        <div class="push-status" id="pushStatus" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="settings-group settings-data-card">
+        <div class="settings-group-title"><span>▤</span><strong id="dataTitle">Données</strong></div>
+        <div class="settings-row static"><span id="syncLabel">Synchronisation</span><strong id="settingsSyncText">Local</strong></div>
+        <button class="action-row" id="resetTodayBtn" type="button"><span id="resetTodayLabel">Réinitialiser les données du jour</span><b>›</b></button>
+        <button class="action-row danger" id="deleteHistoryBtn" type="button"><span id="deleteHistoryLabel">Supprimer tout l’historique</span><b>›</b></button>
+      </section>
+
+      <section class="settings-group settings-account-card">
+        <div class="settings-group-title"><span>●</span><strong id="accountTitle">Compte</strong></div>
+        <div class="settings-row static"><span id="accountEmail">—</span></div>
+        <button class="action-row" id="logoutBtn" type="button"><span id="logoutLabel">Déconnexion</span><b>›</b></button>
+      </section>
+
+      <section class="settings-group about-group settings-about-card">
+        <div class="settings-group-title"><span>ⓘ</span><strong id="aboutTitle">À propos</strong></div>
+        <div class="settings-row static"><span id="versionLabel">Version 6.0 (test hors ligne)</span><strong>2LO</strong></div>
+      </section>
+
+      <div class="soda-view" id="sodaSettings">
+        <h2 class="visually-hidden" id="sodaSettingsTitle">Réglages de la boisson</h2>
+        <section class="settings-hero settings-hero-soda" aria-label="Présentation des réglages soda">
+          <div class="settings-hero-head"><span class="settings-eyebrow" id="sodaSettingsEyebrow">🔥 COCA-COLA · INFERNO RED</span><span class="settings-hero-pill">TON UNIVERS</span></div>
+          <strong id="sodaSettingsHeroHeadline">Moins de soda, à ton rythme.</strong>
+          <p>Fixe tes limites et garde un œil sur tes dépenses.</p>
+          <div class="settings-hero-remark"><span>◎ Limite personnelle</span><b id="sodaSettingsHeroLimit">1,0 L</b></div>
+        </section>
+        <section class="soda-settings-card settings-primary-card">
+          <div class="settings-group-title"><span>◎</span><strong id="sodaSettingsLabel">Limite quotidienne</strong><b id="sodaLimitValue">1,0 L</b></div>
+          <div class="settings-field"><label for="sodaLimitInput">Limite personnalisée</label><div class="settings-input-unit"><input id="sodaLimitInput" type="number" min="100" max="20000" step="10" inputmode="numeric" aria-describedby="sodaLimitHelp"><span>ml</span></div></div>
+          <div class="settings-preset-row" role="group" aria-label="Limites rapides"><button type="button" data-soda-limit="330">330 ml</button><button type="button" data-soda-limit="500">500 ml</button><button type="button" data-soda-limit="1000">1,0 L</button><button type="button" data-soda-limit="1500">1,5 L</button></div>
+          <p class="settings-help" id="sodaLimitHelp">Les quantités de 330 et 500 ml sont additionnées. La limite n'est jamais un objectif à atteindre.</p>
+        </section>
+        <section class="soda-settings-card settings-prices-card">
+          <div class="settings-group-title"><span>€</span><strong>Prix habituels</strong></div>
+          <p class="settings-help">Chaque prise conserve le prix enregistré au moment où tu l'ajoutes.</p>
+          <div class="settings-price-grid">
+            <div class="settings-field"><label for="sodaPrice330">Canette · 330 ml</label><div class="settings-input-unit"><input id="sodaPrice330" type="number" min="0" max="999" step="0.01" inputmode="decimal"><span>€</span></div></div>
+            <div class="settings-field"><label for="sodaPrice500">Canette · 500 ml</label><div class="settings-input-unit"><input id="sodaPrice500" type="number" min="0" max="999" step="0.01" inputmode="decimal"><span>€</span></div></div>
+          </div>
+          <button type="button" class="soda-cta settings-cta" id="sodaSaveSettings">Enregistrer les réglages</button>
+        </section>
+        <section class="soda-settings-card settings-data-card"><div class="settings-group-title"><span>▤</span><strong>Données de démonstration</strong></div><p class="settings-help">Stockées dans ce navigateur uniquement, sans Supabase.</p><button type="button" class="soda-quiet" id="sodaResetToday">Effacer les prises du jour</button><button type="button" class="soda-quiet soda-danger" id="sodaResetAll">Effacer tout l’historique de cette boisson</button></section>
+        <section class="soda-settings-card settings-about-card"><div class="settings-group-title"><span>ⓘ</span><strong>À propos</strong></div><div class="settings-compact-row"><span>Version</span><strong>2LO V6.0.1 · Jauges harmonisées</strong></div></section>
+      </div>
+
+          <div class="world-placeholder" id="worldPlaceholderSettings" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Navigation principale">
+    <button class="nav-btn active" data-target="today" type="button" aria-current="page">
+      <svg viewBox="0 0 24 24"><path d="M3 11.2 12 4l9 7.2v8.3a.5.5 0 0 1-.5.5H15v-6H9v6H3.5a.5.5 0 0 1-.5-.5v-8.3Z"/></svg><span id="navHome">Aujourd’hui</span>
+    </button>
+    <button class="nav-btn" data-target="progress" type="button">
+      <svg viewBox="0 0 24 24"><path d="M5 19V9m7 10V5m7 14v-7"/></svg><span id="navProgress">Progression</span>
+    </button>
+    <button class="nav-btn" data-target="history" type="button">
+      <svg viewBox="0 0 24 24"><path d="M5 4v3m14-3v3M4 9h16M5 6h14a1 1 0 0 1 1 1v13H4V7a1 1 0 0 1 1-1Z"/></svg><span id="navHistory">Historique</span>
+    </button>
+    <button class="nav-btn" data-target="settings" type="button">
+      <svg viewBox="0 0 24 24"><path d="M12 8.7a3.3 3.3 0 1 0 0 6.6 3.3 3.3 0 0 0 0-6.6Zm0-5.2 1.2 2.2 2.5.6 2-1.5 2 2-.9 2.3.6 2.5 2.1 1.3v2.8l-2.1 1.3-.6 2.5.9 2.3-2 2-2-1.5-2.5.6-1.2 2.2H10.8l-1.2-2.2-2.5-.6-2 1.5-2-2 .9-2.3-.6-2.5-2.1-1.3v-2.8l2.1-1.3.6-2.5-.9-2.3 2-2 2 1.5 2.5-.6 1.2-2.2H12Z"/></svg><span id="navSettings">Réglages</span>
+    </button>
+  </nav>
+</div>
+
+<div class="sheet-backdrop hidden" id="addSheet" aria-hidden="true">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="addSheetTitle">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><button class="sheet-close" id="closeAdd" type="button">×</button><h2 id="addSheetTitle">Ajouter de l’eau</h2><span></span></div>
+    <div class="add-grid">
+      <button class="add-option" data-add-ml="150" type="button"><span class="glass-icon large"><i></i></span><strong>150 ml</strong></button>
+      <button class="add-option" data-add-ml="250" type="button"><span class="glass-icon large"><i></i></span><strong>250 ml</strong></button>
+      <button class="add-option" data-add-ml="330" type="button"><span class="glass-icon large"><i></i></span><strong>330 ml</strong></button>
+      <button class="add-option" data-add-ml="500" type="button"><span class="glass-icon large"><i></i></span><strong>500 ml</strong></button>
+    </div>
+    <div class="custom-add-row"><label id="customLabel" for="customMl">Quantité personnalisée</label><div><input class="custom-input" id="customMl" type="number" min="1" placeholder="ml"><input class="custom-time" id="customTime" type="time"></div></div>
+    <button class="primary" id="addCustomBtn" type="button">Ajouter au journal</button>
+  </div>
+</div>
+
+
+<div class="sheet-backdrop hidden" id="sodaSheet" aria-hidden="true"><div class="sheet soda-add-sheet" role="dialog" aria-modal="true" aria-labelledby="sodaSheetName">
+  <div class="sheet-handle"></div><div class="sheet-head"><button class="sheet-close" type="button" id="sodaSheetClose">×</button><h2 id="sodaSheetName">Ajouter une consommation</h2><span></span></div>
+  <div class="soda-sheet-fields"><label for="sodaAmountInput">Quantité</label><select id="sodaAmountInput"><option value="330">330 ml</option><option value="500">500 ml</option></select><label for="sodaWhenInput">Date et heure</label><input id="sodaWhenInput" type="datetime-local"/><label for="sodaPriceInput">Prix de cette prise (€)</label><input id="sodaPriceInput" type="number" min="0" max="999" step="0.01" inputmode="decimal"/><button class="soda-cta" type="button" id="sodaSheetSave">Enregistrer la prise</button></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+<script src="app.js?v=6010"></script>
+</body>
+</html>
