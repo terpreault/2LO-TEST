@@ -134,5 +134,5 @@
     return {logs,settings};
   }
   window.TW_SYNC = { configured:valid, bootstrap, sendMagicLink, signOut,
-    push, pull, online, getUser:()=>current?.user||null };
+    push, pull, online, getUser:()=>current?.user||null, getAccessToken:token };
 })();

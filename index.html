@@ -9,9 +9,9 @@
   <meta name="apple-mobile-web-app-title" content="2LO TEST">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=6020">
-  <script src="config.js?v=6020"></script>
-  <title>2LO TEST — Three Worlds V6.0.2</title>
+  <link rel="stylesheet" href="styles.css?v=6030">
+  <script src="config.js?v=6030"></script>
+  <title>2LO TEST — Three Worlds V6.0.3</title>
 </head>
 <body>
 
@@ -80,7 +80,7 @@
 
       <div class="home-heading">
         <div class="water-head-copy">
-          <span class="water-demo-badge">2LO TEST V6.0.2 · HORS LIGNE</span>
+          <span class="water-demo-badge">2LO TEST V6.0.3 · HORS LIGNE</span>
           <h1>Water</h1>
           <p class="water-invitation">Reste hydraté, reste au top.</p>
         </div>
@@ -127,7 +127,7 @@
       </div>
 
       <div class="soda-view" id="sodaToday">
-        <header class="soda-heading"><span class="soda-demo-badge">2LO TEST V6.0.2 · HORS LIGNE</span><h1 id="sodaName">Coca-Cola</h1><p>Moins de soda, à ton rythme.</p></header>
+        <header class="soda-heading"><span class="soda-demo-badge">2LO TEST V6.0.3 · HORS LIGNE</span><h1 id="sodaName">Coca-Cola</h1><p>Moins de soda, à ton rythme.</p></header>
         <div class="soda-gauge" id="sodaGauge">
           <div class="soda-gauge-inner">
             <div class="soda-liquid" id="sodaGaugeLiquid"><i></i><i></i><i></i></div>
@@ -293,8 +293,16 @@
         <div class="settings-row"><label id="sleepLabel" for="sleepInput">Heure de fin</label><input class="plain-time" id="sleepInput" type="time"></div>
         <div class="settings-row"><label id="intervalLabel" for="intervalInput">Fréquence</label><select class="plain-select" id="intervalInput"><option value="30">30 min</option><option value="45">45 min</option><option value="60">Toutes les heures</option><option value="90">Toutes les 1 h 30</option><option value="120">Toutes les 2 heures</option></select></div>
         <button class="settings-save" id="saveSettings" type="button">Enregistrer les rappels</button>
+        <button class="settings-test" id="enableDeviceWater" type="button">🔔 Autoriser les notifications sur cet appareil</button>
         <button class="settings-test" id="testPushBtn" type="button">Envoyer une notification test</button>
         <div class="push-status" id="pushStatus" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="settings-group settings-weekly-card" aria-label="Bilan de la semaine">
+        <div class="settings-group-title"><span>▦</span><strong>Ton bilan du dimanche</strong><button class="toggle" id="weeklyToggleWater" type="button" role="switch" aria-checked="false" aria-label="Recevoir le bilan hebdomadaire"><i></i></button></div>
+        <div class="settings-row"><label for="weeklyTimeWater">Heure du bilan</label><input class="plain-time" id="weeklyTimeWater" type="time" value="19:00"></div>
+        <p class="settings-help tw-weekly-help">Un seul bilan 💧🥤⚡, avec tes résultats selon les consommations enregistrées. Notifications facultatives.</p>
+        <p class="push-status" id="weeklyStatusWater" role="status" aria-live="polite"></p>
       </section>
 
       <section class="settings-group settings-data-card">
@@ -312,11 +320,13 @@
 
       <section class="settings-group about-group settings-about-card">
         <div class="settings-group-title"><span>ⓘ</span><strong id="aboutTitle">À propos</strong></div>
-        <div class="settings-row static"><span id="versionLabel">Version 6.0.2 (synchronisation TEST)</span><strong>2LO</strong></div>
+        <div class="settings-row static"><span id="versionLabel">Version 6.0.3 (notifications TEST)</span><strong>2LO</strong></div>
       </section>
 
       <div class="soda-view" id="sodaSettings">
         <h2 class="visually-hidden" id="sodaSettingsTitle">Réglages de la boisson</h2>
+
+
         <section class="settings-hero settings-hero-soda" aria-label="Présentation des réglages soda">
           <div class="settings-hero-head"><span class="settings-eyebrow" id="sodaSettingsEyebrow">🔥 COCA-COLA · INFERNO RED</span><span class="settings-hero-pill">TON UNIVERS</span></div>
           <strong id="sodaSettingsHeroHeadline">Moins de soda, à ton rythme.</strong>
@@ -338,8 +348,15 @@
           </div>
           <button type="button" class="soda-cta settings-cta" id="sodaSaveSettings">Enregistrer les réglages</button>
         </section>
+      <section class="settings-group settings-weekly-card" aria-label="Bilan de la semaine">
+        <div class="settings-group-title"><span>▦</span><strong>Ton bilan du dimanche</strong><button class="toggle" id="weeklyToggleSoda" type="button" role="switch" aria-checked="false" aria-label="Recevoir le bilan hebdomadaire"><i></i></button></div>
+        <div class="settings-row"><label for="weeklyTimeSoda">Heure du bilan</label><input class="plain-time" id="weeklyTimeSoda" type="time" value="19:00"></div>
+        <p class="settings-help tw-weekly-help">Un seul bilan 💧🥤⚡, avec tes résultats selon les consommations enregistrées. Notifications facultatives.</p>
+        <button class="settings-test" id="enableDeviceSoda" type="button">🔔 Autoriser les notifications sur cet appareil</button>
+        <p class="push-status" id="weeklyStatusSoda" role="status" aria-live="polite"></p>
+      </section>
         <section class="soda-settings-card settings-data-card"><div class="settings-group-title"><span>▤</span><strong>Données</strong></div><p class="settings-help">Enregistrées immédiatement sur cet appareil. Synchronisées avec Supabase après connexion, dès qu’Internet est disponible.</p><button type="button" class="soda-quiet" id="sodaResetToday">Effacer les prises du jour</button><button type="button" class="soda-quiet soda-danger" id="sodaResetAll">Effacer tout l’historique de cette boisson</button></section>
-        <section class="soda-settings-card settings-about-card"><div class="settings-group-title"><span>ⓘ</span><strong>À propos</strong></div><div class="settings-compact-row"><span>Version</span><strong>2LO V6.0.2 · Synchronisation TEST</strong></div></section>
+        <section class="soda-settings-card settings-about-card"><div class="settings-group-title"><span>ⓘ</span><strong>À propos</strong></div><div class="settings-compact-row"><span>Version</span><strong>2LO V6.0.3 · Notifications TEST</strong></div></section>
       </div>
 
           <div class="world-placeholder" id="worldPlaceholderSettings" aria-live="polite"></div>
@@ -384,7 +401,8 @@
 </div></div>
 
 <div class="toast" id="toast"></div>
-<script src="sync.js?v=6020"></script>
-<script src="app.js?v=6020"></script>
+<script src="sync.js?v=6030"></script>
+<script src="notifications.js?v=6030"></script>
+<script src="app.js?v=6030"></script>
 </body>
 </html>

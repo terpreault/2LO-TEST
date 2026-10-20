@@ -1,4 +1,4 @@
-const DEMO = false; // Distinct TEST app; reminders are intentionally not live yet.
+const DEMO = false; // Distinct TEST app; Web Push opt-in stage.
 const STORAGE_KEY = "2lo_v520_demo_only"; // Preserve V6.0.1's local demo data.
 const C = window.GASSIEN_CONFIG || {};
 const configured = !!window.TW_SYNC?.configured;
@@ -16,7 +16,7 @@ const T = {
     settings: "Réglages", settingsLead: "Personnalisez votre suivi", dailyGoal: "Objectif quotidien", customGoal: "Personnalisé",
     reminders: "Rappels", wake: "Heure de début", sleep: "Heure de fin", frequency: "Fréquence", saveReminders: "Enregistrer les rappels", testPush: "Envoyer une notification test",
     language: "Langue", data: "Données", sync: "Synchronisation", resetToday: "Réinitialiser les données du jour", deleteHistory: "Supprimer tout l’historique",
-    account: "Compte", logout: "Déconnexion", about: "À propos", version: "Version 6.0.2 (synchronisation TEST)", today: "Aujourd’hui", navProgress: "Progression", navHistory: "Historique", navSettings: "Réglages",
+    account: "Compte", logout: "Déconnexion", about: "À propos", version: "Version 6.0.3 (synchronisation TEST)", today: "Aujourd’hui", navProgress: "Progression", navHistory: "Historique", navSettings: "Réglages",
     cloud: "En ligne", local: "Local", offline: "Hors ligne", saved: "Réglages enregistrés", drank: "Tu as bu", deletedToday: "Données du jour réinitialisées", deletedAll: "Historique supprimé",
     authIntro: "Connecte-toi pour retrouver ton suivi d’hydratation sur tous tes appareils.",
     pushEnabled: "✓ Rappels activés", pushDisabled: "Rappels désactivés", enableFirst: "Connecte-toi d’abord.", unsupported: "Notifications non supportées sur cet appareil.", keyMissing: "Clé de notification manquante.", denied: "Notifications non autorisées.", enabling: "Activation en cours…", pushError: "Impossible d’activer les rappels.", testSending: "Envoi du test…", testSent: "Notification envoyée 💧", testNone: "Aucune notification envoyée", testError: "Erreur pendant le test",
@@ -145,6 +145,9 @@ async function enterCloud(auth) {
   document.documentElement.dataset.mode=state.activeMode;
   setSync(navigator.onLine?'local':'offline');render();
   scheduleSync();
+  // Never ask for permission automatically; only a tap may initiate Push subscription.
+  window.TW_PUSH?.restore().then(() => renderNotificationChoices())
+    .catch(err => { console.warn('2LO notifications en attente :',err);renderNotificationChoices(); });
 }
 function queueLog(mode, log, deleted=false) {
   if (!userId) {saveLocal();return;}
@@ -351,6 +354,7 @@ function render() {
   } else renderSoda();
   saveLocal();
   setSync(syncMode);
+  renderNotificationChoices();
 }
 
 // Même cadran circulaire pour Water, Coca-Cola et Monster.
@@ -491,7 +495,7 @@ function renderSettings() {
   const optionLabels = {30:"30 min",45:"45 min",60:"Toutes les heures",90:"Toutes les 1 h 30",120:"Toutes les 2 heures"};
   Array.from($("intervalInput").options).forEach(opt => { opt.textContent = optionLabels[opt.value] || opt.textContent; });
   $("reminderToggle")?.classList.toggle("on", state.remindersEnabled); $("reminderToggle")?.setAttribute("aria-checked", state.remindersEnabled ? "true" : "false");
-  setText('pushStatus','Notifications Water : elles seront activées à la prochaine étape.');
+  renderNotificationChoices();
 }
 
 async function addWater(ml, atMs = Date.now()) {
@@ -546,18 +550,64 @@ async function deleteAllHistory() {
 }
 function urlBase64ToUint8Array(base64String) { const padding = "=".repeat((4 - base64String.length % 4) % 4); const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/"); const rawData = window.atob(base64); return Uint8Array.from([...rawData].map(char => char.charCodeAt(0))); }
 
-async function refreshPushState() {
-  try {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
-    const registration = await navigator.serviceWorker.ready; const subscription = await registration.pushManager.getSubscription(); state.remindersEnabled = !!subscription; saveLocal();
-  } catch (e) { console.warn(e); }
+function renderNotificationChoices() {
+  const p=window.TW_PUSH?.getPrefs() || {weekly_enabled:false,weekly_time:'19:00'};
+  for(const suffix of ['Water','Soda']) {
+    const btn=$('weeklyToggle'+suffix), clock=$('weeklyTime'+suffix);
+    if(btn){btn.classList.toggle('on',!!p.weekly_enabled);btn.setAttribute('aria-checked',String(!!p.weekly_enabled));}
+    if(clock && document.activeElement!==clock)clock.value=p.weekly_time||'19:00';
+  }
+  const ready=window.TW_PUSH?.available() && window.TW_PUSH?.supported();
+  const msg= !window.TW_PUSH?.available() ? 'Configuration Web Push serveur à terminer sur Supabase.' :
+    !window.TW_PUSH?.supported() ? 'Sur iPhone, ouvre 2LO depuis son icône sur l’écran d’accueil. Vérifie les autorisations Android/iOS.' :
+    Notification.permission==='denied' ? 'Notifications bloquées : autorise 2LO dans les réglages du téléphone.' :
+    Notification.permission==='granted' ? 'Notifications autorisées sur cet appareil (envois serveur à tester).' :
+    'Active les rappels ou le bilan pour autoriser les notifications sur cet appareil.';
+  setText('pushStatus',msg);
+  setText('weeklyStatusWater',ready ? 'Bilan envoyé le dimanche, avec Internet.' : msg);
+  setText('weeklyStatusSoda',ready ? 'Bilan envoyé le dimanche, avec Internet.' : msg);
 }
-
 async function toggleReminderPush() {
   if(state.activeMode!=='water')return;
-  state.remindersEnabled=!state.remindersEnabled;
-  queueSettings('water');saveLocal();renderSettings();
-  toast('Préférence enregistrée · notifications non actives dans cette version TEST');
+  const next=!state.remindersEnabled;
+  const b=$('reminderToggle');if(b)b.disabled=true;
+  try{
+    if(next)await window.TW_PUSH.enableDevice();
+    state.remindersEnabled=next;
+    queueSettings('water');saveLocal();renderSettings();
+    if(!next)await window.TW_PUSH.unregisterIfUnused(false);
+    toast(next?'Rappels Water activés 💧':'Rappels Water désactivés');
+  }catch(e){toast(e.message||'Notifications non disponibles.');}
+  finally{if(b)b.disabled=false;renderNotificationChoices();}
+}
+async function toggleWeekly() {
+  const btns=['weeklyToggleWater','weeklyToggleSoda'].map($).filter(Boolean);
+  btns.forEach(b=>b.disabled=true);
+  const cur=window.TW_PUSH.getPrefs();const next=!cur.weekly_enabled;
+  try{
+    if(next)await window.TW_PUSH.enableDevice();
+    await window.TW_PUSH.savePrefs({weekly_enabled:next});
+    if(!next)await window.TW_PUSH.unregisterIfUnused(state.remindersEnabled);
+    toast(next?'Bilan du dimanche activé':'Bilan du dimanche désactivé');
+  }catch(e){toast(e.message||'Impossible d’enregistrer ce réglage.');}
+  finally{btns.forEach(b=>b.disabled=false);renderNotificationChoices();}
+}
+async function saveWeeklyTime(value) {
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(value))return;
+  try {await window.TW_PUSH.savePrefs({weekly_time:value});toast('Heure du bilan enregistrée');}
+  catch(e){toast(e.message||'Connexion nécessaire.');}
+  renderNotificationChoices();
+}
+async function enableNotificationsThisDevice() {
+  try {await window.TW_PUSH.enableDevice();toast('Notifications autorisées sur cet appareil.');}
+  catch(e){toast(e.message||'Notifications indisponibles.');}
+  renderNotificationChoices();
+}
+async function testPush() {
+  const b=$('testPushBtn');if(b)b.disabled=true;
+  try{await window.TW_PUSH.sendTest();toast('Notification test envoyée au service Push.');}
+  catch(e){toast(e.message||'Échec du test Push.');}
+  finally{if(b)b.disabled=false;}
 }
 function bind() {
   if (window.__bound) return; window.__bound = true;
@@ -582,6 +632,8 @@ function bind() {
     if(pendingCount()){toast('Synchronise d’abord les modifications en attente avant de te déconnecter.');return;}
     if(!navigator.onLine){toast('Reconnecte-toi à Internet avant de te déconnecter.');return;}
     if(!confirm('Se déconnecter de 2LO TEST ? Les données de ce compte resteront sauvegardées sur cet appareil.'))return;
+    try{await window.TW_PUSH.unregisterOnLogout();}
+    catch(e){toast('Impossible de retirer les notifications de cet appareil : '+e.message);return;}
     await window.TW_SYNC.signOut();location.reload();
   };
   document.querySelectorAll(".quick").forEach(b => b.onclick = () => addWater(Number(b.dataset.ml)));
@@ -600,7 +652,11 @@ function bind() {
   $("resetTodayBtn").onclick = resetToday; $("deleteHistoryBtn").onclick = deleteAllHistory;
   bindSoda();
 
-  $("testPushBtn").onclick = () => toast('Les notifications seront activées après les tests de synchronisation.');
+  $("testPushBtn").onclick=testPush;
+  $("enableDeviceWater").onclick=enableNotificationsThisDevice;
+  $("enableDeviceSoda").onclick=enableNotificationsThisDevice;
+  for(const id of ['weeklyToggleWater','weeklyToggleSoda'])$(id).onclick=toggleWeekly;
+  for(const id of ['weeklyTimeWater','weeklyTimeSoda'])$(id).onchange=e=>saveWeeklyTime(e.target.value);
 }
 
 

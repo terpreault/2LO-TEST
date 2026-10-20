@@ -1,9 +1,9 @@
 /* 2LO V6.0 — étape 6A : coque PWA réellement disponible hors connexion.
    Synchronisation Supabase non mise en cache par le service worker. */
-const CACHE = '2lo-v6-0-iphone-test-6020';
+const CACHE = '2lo-v6-0-iphone-test-6030';
 const CORE = [
-  './', './index.html', './styles.css?v=6020', './app.js?v=6020',
-  './config.js?v=6020', './sync.js?v=6020', './manifest.json',
+  './', './index.html', './styles.css?v=6030', './app.js?v=6030',
+  './config.js?v=6030', './sync.js?v=6030', './notifications.js?v=6030', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png',
   './icons/icon-1024.png', './icons/apple-touch-icon.png',
   './icons/2LO-wordmark.png',
@@ -79,5 +79,26 @@ self.addEventListener('fetch', (event) => {
   })());
 });
 
-// Water push notifications remain disabled in this synchronization test.
-// Real push handling and permissions will be restored in the dedicated notifications stage.
+// Cross-platform Web Push: the remote service sends notifications even when the PWA is closed.
+self.addEventListener('push', event => {
+  event.waitUntil((async()=>{
+    let payload={};
+    try{payload=event.data?.json()||{};}catch{payload={title:'2LO',body:event.data?.text()||'Tu as une nouvelle notification.'};}
+    const title=String(payload.title||'2LO').slice(0,100);
+    const body=String(payload.body||'').slice(0,300);
+    await self.registration.showNotification(title,{
+      body, icon:'./icons/icon-192.png', badge:'./icons/icon-192.png',
+      tag:String(payload.tag||'2lo-notification').slice(0,60),renotify:false,
+      data:{url:new URL('./',self.registration.scope).href}
+    });
+  })());
+});
+self.addEventListener('notificationclick',event=>{
+  event.notification.close();
+  event.waitUntil((async()=>{
+    const clients=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    const target=self.registration.scope;
+    for(const client of clients){if(client.url.startsWith(target)){await client.focus();return;}}
+    await self.clients.openWindow(target);
+  })());
+});

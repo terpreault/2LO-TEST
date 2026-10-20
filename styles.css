@@ -1106,3 +1106,7 @@ html[data-page-hidden="true"] *::after {
 @media(prefers-reduced-motion:reduce) {
   .gauge-orbit,.soda-ring-progress {transition:none!important;}
 }
+
+/* 2LO 6.0.3 — weekly notification choices share the existing world theme tokens */
+[data-screen="settings"] .tw-weekly-help{margin:4px 16px 12px;color:var(--settings-soft);font-size:11px;line-height:1.55}
+[data-screen="settings"] .settings-weekly-card .push-status{padding-top:0}

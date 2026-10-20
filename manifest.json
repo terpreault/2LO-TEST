@@ -1,12 +1,13 @@
 {
   "name": "2LO TEST — Three Worlds",
   "short_name": "2LO TEST",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#F5FAFB",
   "theme_color": "#F5FAFB",
-  "description": "Version 2LO TEST avec historique hors ligne et synchronisation Supabase des trois univers après connexion.",
+  "description": "2LO Three Worlds, suivi hors ligne, synchronisation et notifications Web Push facultatives.",
   "icons": [
     {
       "src": "icons/icon-192.png",
