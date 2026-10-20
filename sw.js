@@ -1,9 +1,9 @@
 /* 2LO V6.0 — étape 6A : coque PWA réellement disponible hors connexion.
-   Cette démo n'accède à aucune donnée Supabase. */
-const CACHE = '2lo-v6-0-iphone-test-6010';
+   Synchronisation Supabase non mise en cache par le service worker. */
+const CACHE = '2lo-v6-0-iphone-test-6020';
 const CORE = [
-  './', './index.html', './styles.css?v=6010', './app.js?v=6010',
-  './config.js?v=6010', './manifest.json',
+  './', './index.html', './styles.css?v=6020', './app.js?v=6020',
+  './config.js?v=6020', './sync.js?v=6020', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png',
   './icons/icon-1024.png', './icons/apple-touch-icon.png',
   './icons/2LO-wordmark.png',
@@ -48,6 +48,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Public configuration must refresh whenever it changes on GitHub Pages.
+  // Keep an offline copy so a previously activated session still works offline.
+  if (url.pathname.endsWith('/config.js')) {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE);
+      try {
+        const response = await fetch(request, {cache:'no-store'});
+        if (response.ok) await cache.put(request,response.clone());
+        return response;
+      } catch (_) { return (await cache.match(request)) || Response.error(); }
+    })());
+    return;
+  }
+
   // Code, fonts (if added later), icons and the three heavy backgrounds are cache first.
   event.respondWith((async () => {
     const cached = await caches.match(request);
@@ -65,5 +79,5 @@ self.addEventListener('fetch', (event) => {
   })());
 });
 
-// Water push notifications remain disabled in this offline demo.
+// Water push notifications remain disabled in this synchronization test.
 // Real push handling and permissions will be restored in the dedicated notifications stage.

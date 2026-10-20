@@ -1,9 +1,8 @@
-const DEMO = window.TWOLO_TEST_MODE === true;
-const STORAGE_KEY = DEMO ? "2lo_v520_demo_only" : "gassienLocal";
-const C = DEMO ? {} : (window.GASSIEN_CONFIG || {});
-const configured = C.SUPABASE_URL && !C.SUPABASE_URL.includes("PASTE_") &&
-  C.SUPABASE_PUBLISHABLE_KEY && !C.SUPABASE_PUBLISHABLE_KEY.includes("PASTE_");
-const sb = configured ? window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_PUBLISHABLE_KEY) : null;
+const DEMO = false; // Distinct TEST app; reminders are intentionally not live yet.
+const STORAGE_KEY = "2lo_v520_demo_only"; // Preserve V6.0.1's local demo data.
+const C = window.GASSIEN_CONFIG || {};
+const configured = !!window.TW_SYNC?.configured;
+const sb = null; // Legacy production hydration tables are NEVER accessed in 2LO TEST.
 
 const T = {
   fr: {
@@ -17,7 +16,7 @@ const T = {
     settings: "Réglages", settingsLead: "Personnalisez votre suivi", dailyGoal: "Objectif quotidien", customGoal: "Personnalisé",
     reminders: "Rappels", wake: "Heure de début", sleep: "Heure de fin", frequency: "Fréquence", saveReminders: "Enregistrer les rappels", testPush: "Envoyer une notification test",
     language: "Langue", data: "Données", sync: "Synchronisation", resetToday: "Réinitialiser les données du jour", deleteHistory: "Supprimer tout l’historique",
-    account: "Compte", logout: "Déconnexion", about: "À propos", version: "Version 6.0.1 (jauges harmonisées)", today: "Aujourd’hui", navProgress: "Progression", navHistory: "Historique", navSettings: "Réglages",
+    account: "Compte", logout: "Déconnexion", about: "À propos", version: "Version 6.0.2 (synchronisation TEST)", today: "Aujourd’hui", navProgress: "Progression", navHistory: "Historique", navSettings: "Réglages",
     cloud: "En ligne", local: "Local", offline: "Hors ligne", saved: "Réglages enregistrés", drank: "Tu as bu", deletedToday: "Données du jour réinitialisées", deletedAll: "Historique supprimé",
     authIntro: "Connecte-toi pour retrouver ton suivi d’hydratation sur tous tes appareils.",
     pushEnabled: "✓ Rappels activés", pushDisabled: "Rappels désactivés", enableFirst: "Connecte-toi d’abord.", unsupported: "Notifications non supportées sur cet appareil.", keyMissing: "Clé de notification manquante.", denied: "Notifications non autorisées.", enabling: "Activation en cours…", pushError: "Impossible d’activer les rappels.", testSending: "Envoi du test…", testSent: "Notification envoyée 💧", testNone: "Aucune notification envoyée", testError: "Erreur pendant le test",
@@ -78,8 +77,31 @@ let syncMode = "local";
 const $ = id => document.getElementById(id);
 const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
 const toast = message => { const el = $("toast"); if (!el) return; el.textContent = message; el.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove("show"), 1900); };
+function makeUuid() {
+  if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
+  const arr=new Uint8Array(16);crypto.getRandomValues(arr);
+  arr[6]=(arr[6]&15)|64;arr[8]=(arr[8]&63)|128;
+  const hex=Array.from(arr,x=>x.toString(16).padStart(2,'0')).join('');
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+}
 const key = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const saveLocal = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+const saveLocal = () => localStorage.setItem(userId ? `2lo_tw_user_${userId}` : STORAGE_KEY, JSON.stringify(state));
+function newUserState(uid) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(`2lo_tw_user_${uid}`) || "null");
+    if (saved && typeof saved === "object" && !Array.isArray(saved)) return saved;
+  } catch (e) { console.warn('2LO: cache utilisateur illisible.',e); }
+  return {lang:'fr',activeMode:'water',goal:2000,interval:60,wake:'08:00',sleep:'23:00',
+    remindersEnabled:false,logs:[],sodaData:{},_tw:{pendingLogs:{},pendingSettings:{}}};
+}
+function queues() {
+  if (!state._tw || typeof state._tw !== 'object') state._tw={};
+  if (!state._tw.pendingLogs || typeof state._tw.pendingLogs !== 'object') state._tw.pendingLogs={};
+  if (!state._tw.pendingSettings || typeof state._tw.pendingSettings !== 'object') state._tw.pendingSettings={};
+  return state._tw;
+}
+const pendingCount = () => userId ? Object.keys(queues().pendingLogs).length + Object.keys(queues().pendingSettings).length : 0;
+
 const locale = () => "fr-FR";
 const formatL = (ml, digits = 1) => `${(ml / 1000).toLocaleString(locale(), { minimumFractionDigits: digits, maximumFractionDigits: digits })} L`;
 const formatTime = ts => new Date(ts).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
@@ -89,63 +111,137 @@ const totalForKey = dayKey => state.logs.filter(x => x.day === dayKey).reduce((s
 
 function setSync(mode) {
   syncMode = mode;
-  setText("settingsSyncText", mode === "cloud" ? T[state.lang].cloud : mode === "offline" ? T[state.lang].offline : T[state.lang].local);
+  setText("settingsSyncText", mode === "cloud" ? "Synchronisé" : mode === "offline" ? "Hors ligne" : "En attente");
+  setText("syncDetail", userId ? (pendingCount() ? `${pendingCount()} modification(s) à synchroniser` : mode === 'cloud' ? 'Données à jour sur cet appareil et dans Supabase.' : 'Tes données sont conservées localement.') : 'Mode local : aucune synchronisation active.');
 }
 
+let synchronizing=null;
+let syncAgain=false;
 async function init() {
-  if (DEMO) {
-    $("auth").classList.add("hidden");
-    setSync("local"); bind(); render(); return;
-  }
+  bind();
   if (!configured) {
     $("configWarning").classList.remove("hidden");
     $("demoBtn").classList.remove("hidden");
     $("loginBtn").classList.add("hidden");
-    $("signupBtn").classList.add("hidden");
     $("authFields").classList.add("hidden");
-    setSync("local");
-    bind(); render(); return;
+    setSync("local"); render(); return;
   }
-  const { data: { session: s } } = await sb.auth.getSession();
-  if (s) await enterCloud(s); else $("auth").classList.remove("hidden");
-  sb.auth.onAuthStateChange(async (_event, sess) => { if (sess && sess.user?.id !== userId) await enterCloud(sess); });
-  bind();
+  try {
+    const auth=await window.TW_SYNC.bootstrap();
+    if (auth?.user?.id) await enterCloud(auth);
+    else { $("auth").classList.remove("hidden"); setSync('local'); }
+  } catch (error) {
+    console.warn('2LO : authentification',error);
+    setText('authStatus','Connexion non terminée : '+error.message);
+    $("auth").classList.remove("hidden");
+  }
 }
-
-async function enterCloud(s) {
-  session = s; userId = s.user.id; $("auth").classList.add("hidden");
-  await ensureSettings(); await loadCloud(); subscribeRealtime(); setSync("cloud"); await refreshPushState(); render();
+async function enterCloud(auth) {
+  session=auth;userId=auth.user.id;
+  state=newUserState(userId);state.lang='fr';state.activeMode=normalizeWorld(state.activeMode);
+  if (!Array.isArray(state.logs)) state.logs=[];
+  queues();
+  $("auth").classList.add("hidden");
+  document.documentElement.dataset.mode=state.activeMode;
+  setSync(navigator.onLine?'local':'offline');render();
+  scheduleSync();
 }
-
-async function ensureSettings() {
-  const { data, error } = await sb.from("hydration_settings").select("*").eq("user_id", userId).maybeSingle();
-  if (error) { console.error(error); return; }
-  if (!data) await sb.from("hydration_settings").insert({ user_id: userId, goal_ml: 2000, interval_minutes: 60, wake_time: "08:00", sleep_time: "23:00", language: "fr" });
+function queueLog(mode, log, deleted=false) {
+  if (!userId) {saveLocal();return;}
+  const now=new Date().toISOString();
+  queues().pendingLogs[log.id] = {
+    id:log.id,mode,amount_ml:log.ml,price_cents:mode==='water'?null:Number(log.cents||0),
+    consumed_at:new Date(log.ts).toISOString(),updated_at:now,deleted_at:deleted?now:null
+  };
+  saveLocal();scheduleSync();
 }
-
-async function loadCloud() {
-  const [{ data: s, error: se }, { data: logs, error: le }] = await Promise.all([
-    sb.from("hydration_settings").select("*").eq("user_id", userId).single(),
-    sb.from("hydration_logs").select("*").eq("user_id", userId).order("consumed_at", { ascending: false }).limit(1500)
-  ]);
-  if (se || le) { console.error(se || le); setSync("offline"); return; }
-  state.lang = "fr"; // La langue du cloud ne réactive jamais une interface anglaise.
-  state.goal = s.goal_ml;
-  state.interval = s.interval_minutes;
-  state.wake = (s.wake_time || "08:00").slice(0, 5);
-  state.sleep = (s.sleep_time || "23:00").slice(0, 5);
-  state.logs = (logs || []).map(x => ({ id: x.id, ml: x.amount_ml, ts: new Date(x.consumed_at).getTime(), day: key(new Date(x.consumed_at)) }));
-  saveLocal();
+function queueSettings(mode) {
+  if (!userId) {saveLocal();return;}
+  const now=new Date().toISOString();
+  queues().pendingSettings[mode]=mode==='water' ? {
+    mode,water_goal_ml:state.goal,soda_limit_ml:null,price_330_cents:null,price_500_cents:null,
+    reminders_enabled:!!state.remindersEnabled,reminder_interval_min:state.interval,
+    reminder_start:state.wake,reminder_end:state.sleep,updated_at:now
+  } : {
+    mode,water_goal_ml:null,soda_limit_ml:sodaStore(mode).limitMl,
+    price_330_cents:Number(sodaStore(mode).prices[330]),price_500_cents:Number(sodaStore(mode).prices[500]),
+    reminders_enabled:false,reminder_interval_min:null,reminder_start:null,reminder_end:null,updated_at:now
+  };
+  saveLocal();scheduleSync();
 }
-
-function subscribeRealtime() {
-  if (channel) sb.removeChannel(channel);
-  channel = sb.channel("2lo-live-" + userId)
-    .on("postgres_changes", { event: "*", schema: "public", table: "hydration_settings", filter: `user_id=eq.${userId}` }, async () => { await loadCloud(); render(); })
-    .on("postgres_changes", { event: "*", schema: "public", table: "hydration_logs", filter: `user_id=eq.${userId}` }, async () => { await loadCloud(); render(); })
-    .subscribe(status => { if (status === "SUBSCRIBED") setSync("cloud"); });
+function applyServer({logs,settings}) {
+  const q=queues();
+  const byId=new Map();
+  for(const remote of logs) {
+    if (remote.deleted_at) continue;
+    const ts=new Date(remote.consumed_at).getTime();
+    if (!Number.isFinite(ts)||!['water','coca','monster'].includes(remote.mode))continue;
+    byId.set(remote.id,{id:remote.id,mode:remote.mode,ml:Number(remote.amount_ml),
+      cents:Number(remote.price_cents||0),ts,day:key(new Date(ts))});
+  }
+  // Unsynced local changes always remain visible and are never overwritten by a pull.
+  for(const item of Object.values(q.pendingLogs)) {
+    if(item.deleted_at)byId.delete(item.id);
+    else {const ts=new Date(item.consumed_at).getTime();byId.set(item.id,{id:item.id,mode:item.mode,
+      ml:Number(item.amount_ml),cents:Number(item.price_cents||0),ts,day:key(new Date(ts))});}
+  }
+  const records=[...byId.values()];
+  state.logs=records.filter(x=>x.mode==='water').map(({mode,cents,...rest})=>rest);
+  for(const mode of ['coca','monster']) {
+    sodaStore(mode).logs=records.filter(x=>x.mode===mode).map(({mode,...rest})=>rest);
+  }
+  for(const r of settings) {
+    if(q.pendingSettings[r.mode])continue;
+    if(r.mode==='water') {
+      state.goal=Number(r.water_goal_ml)||2000;
+      state.interval=Number(r.reminder_interval_min)||60;
+      state.wake=(r.reminder_start||'08:00').slice(0,5);
+      state.sleep=(r.reminder_end||'23:00').slice(0,5);
+      state.remindersEnabled=!!r.reminders_enabled;
+    } else if(r.mode==='coca'||r.mode==='monster') {
+      const d=sodaStore(r.mode);
+      d.limitMl=Number(r.soda_limit_ml)||SODA_DEFAULT[r.mode].limitMl;
+      d.prices={330:Number(r.price_330_cents??SODA_DEFAULT[r.mode].prices[330]),
+        500:Number(r.price_500_cents??SODA_DEFAULT[r.mode].prices[500])};
+    }
+  }
+  saveLocal();render();
 }
-
+function scheduleSync() {
+  if (!userId || !configured || !navigator.onLine)return;
+  if (synchronizing){syncAgain=true;return;}
+  setTimeout(()=>{void synchronizeAll();},120);
+}
+async function synchronizeAll() {
+  if (!userId || !configured || !navigator.onLine)return;
+  if (synchronizing){syncAgain=true;return synchronizing;}
+  const uid=userId;
+  const job=(async()=>{
+    try {
+      setSync('local');
+      await window.TW_SYNC.push(queues(),uid,(kind,id,revision)=>{
+        if(userId!==uid)return;
+        const store=kind==='log'?queues().pendingLogs:queues().pendingSettings;
+        if(store[id]?.updated_at===revision){delete store[id];saveLocal();}
+      });
+      const fresh=await window.TW_SYNC.pull(uid);
+      if(uid!==userId)return;
+      applyServer(fresh);
+      setSync(pendingCount()?'local':'cloud');
+      render();
+    } catch(error) {
+      console.warn('2LO: synchronisation reportée (données locales préservées).',error);
+      setSync(navigator.onLine?'local':'offline');
+      render();
+      setText('syncDetail','Connexion non synchronisée : '+error.message);
+    }
+  })();
+  synchronizing=job;
+  try { await job; } finally {
+    synchronizing=null;
+    if(syncAgain){syncAgain=false;scheduleSync();}
+  }
+}
 function todays() { return state.logs.filter(x => x.day === key()); }
 function totalToday() { return todays().reduce((sum, item) => sum + item.ml, 0); }
 
@@ -224,7 +320,7 @@ function renderWorldSwitcher() {
 function render() {
   const t = T[state.lang];
   document.documentElement.lang = "fr";
-  setText("versionLabel", DEMO ? "Version 6.0.1 (jauges harmonisées)" : t.version);
+  setText("versionLabel", t.version);
   document.documentElement.dataset.mode = activeWorld().id;
   // One unique, vector logo in the theme selector; no duplicate large header logo.
   const visualMode = state.activeMode;
@@ -244,9 +340,9 @@ function render() {
     else button.removeAttribute("aria-current");
   });
   setText("settingsSyncText", syncMode === "cloud" ? t.cloud : syncMode === "offline" ? t.offline : t.local);
-  if (DEMO) setText("versionLabel", "Version 6.0.1 (jauges harmonisées)");
 
-  setText("accountEmail", session?.user?.email || (DEMO ? "Démonstration · sans Supabase" : "Mode local"));
+
+  setText("accountEmail", session?.user?.email || "Mode local");
   setText("settingsLead", state.activeMode === "water" ? "Hydratation · objectif et rappels" : `${activeWorld().label} · limite et dépenses`);
 
   renderWorldSwitcher();
@@ -254,6 +350,7 @@ function render() {
     renderToday(); renderProgress(); renderHistory(); renderSettings();
   } else renderSoda();
   saveLocal();
+  setSync(syncMode);
 }
 
 // Même cadran circulaire pour Water, Coca-Cola et Monster.
@@ -394,36 +491,24 @@ function renderSettings() {
   const optionLabels = {30:"30 min",45:"45 min",60:"Toutes les heures",90:"Toutes les 1 h 30",120:"Toutes les 2 heures"};
   Array.from($("intervalInput").options).forEach(opt => { opt.textContent = optionLabels[opt.value] || opt.textContent; });
   $("reminderToggle")?.classList.toggle("on", state.remindersEnabled); $("reminderToggle")?.setAttribute("aria-checked", state.remindersEnabled ? "true" : "false");
-  if (DEMO) {
-    setText("pushStatus", `Mode démo : préférence ${state.remindersEnabled ? "activée" : "désactivée"}, aucune notification réelle n'est envoyée.`);
-  } else if (state.remindersEnabled && $("pushStatus") && !$("pushStatus").textContent) $("pushStatus").textContent = T[state.lang].pushEnabled;
+  setText('pushStatus','Notifications Water : elles seront activées à la prochaine étape.');
 }
 
 async function addWater(ml, atMs = Date.now()) {
-  if (state.activeMode !== "water") return; // Never put a soda into hydration_logs.
-  const amount = Math.round(Number(ml)); if (!amount || amount <= 0) return;
-  const temp = { id: "temp-" + Date.now(), ml: amount, ts: atMs, day: key(new Date(atMs)) }; state.logs.push(temp); render(); closeAddSheet();
-  if (sb && userId) {
-    const { error } = await sb.from("hydration_logs").insert({ user_id: userId, amount_ml: amount, consumed_at: new Date(atMs).toISOString() });
-    if (error) { state.logs = state.logs.filter(x => x.id !== temp.id); setSync("offline"); render(); toast(T[state.lang].syncError); return; }
-  } else saveLocal();
+  if(state.activeMode!=='water')return;
+  const amount=Math.round(Number(ml));if(!Number.isFinite(amount)||amount<=0)return;
+  const item={id:makeUuid(),ml:amount,ts:atMs,day:key(new Date(atMs))};
+  state.logs.push(item);queueLog('water',item);saveLocal();render();closeAddSheet();
   toast(`${T[state.lang].drank} ${amount} ml 💧`);
 }
-
-async function saveSettings(silent = false) {
-  if (state.activeMode !== "water") return;
-  const requestedGoal=Number($("goalInput").value);
-  if (!Number.isInteger(requestedGoal) || requestedGoal<500 || requestedGoal>20000) {
-    toast("Choisis un objectif entre 500 et 20 000 ml.");renderSettings();return;
-  }
-  state.goal = requestedGoal; state.interval = Number($("intervalInput").value) || 60; state.wake = $("wakeInput").value || "08:00"; state.sleep = $("sleepInput").value || "23:00"; render();
-  if (sb && userId) {
-    const { error } = await sb.from("hydration_settings").update({ goal_ml: state.goal, interval_minutes: state.interval, wake_time: state.wake, sleep_time: state.sleep, language: state.lang }).eq("user_id", userId);
-    if (error) { console.error(error); setSync("offline"); }
-  }
-  saveLocal(); if (!silent) toast(T[state.lang].saved);
+async function saveSettings(silent=false) {
+  if(state.activeMode!=='water')return;
+  const goal=Number($('goalInput').value);
+  if(!Number.isInteger(goal)||goal<500||goal>20000){toast('Choisis un objectif entre 500 et 20 000 ml.');renderSettings();return;}
+  state.goal=goal;state.interval=Number($('intervalInput').value)||60;
+  state.wake=$('wakeInput').value||'08:00';state.sleep=$('sleepInput').value||'23:00';
+  queueSettings('water');saveLocal();render();if(!silent)toast(T[state.lang].saved);
 }
-
 function showScreen(target) {
   if (!["today", "progress", "history", "settings"].includes(target)) return;
   document.querySelectorAll(".screen").forEach(s => {
@@ -449,19 +534,16 @@ function closeAddSheet() { $("addSheet").classList.add("hidden"); $("addSheet").
 function customTimestampFromTime(timeValue) { if (!timeValue) return Date.now(); const [h, m] = timeValue.split(":").map(Number); const d = new Date(); d.setHours(h, m, 0, 0); return d.getTime(); }
 
 async function resetToday() {
-  if (state.activeMode !== "water") return;
-  const t = T[state.lang]; if (!confirm(t.confirmReset)) return; const start = new Date(); start.setHours(0, 0, 0, 0); const end = new Date(start); end.setDate(end.getDate() + 1);
-  if (sb && userId) { const { error } = await sb.from("hydration_logs").delete().eq("user_id", userId).gte("consumed_at", start.toISOString()).lt("consumed_at", end.toISOString()); if (error) { toast(t.syncError); return; } }
-  state.logs = state.logs.filter(x => x.day !== key()); render(); toast(t.deletedToday);
+  if(state.activeMode!=='water'||!confirm(T[state.lang].confirmReset))return;
+  const selected=state.logs.filter(l=>l.day===key());
+  for(const item of selected)queueLog('water',item,true);
+  state.logs=state.logs.filter(l=>l.day!==key());saveLocal();render();toast(T[state.lang].deletedToday);
 }
-
 async function deleteAllHistory() {
-  if (state.activeMode !== "water") return;
-  const t = T[state.lang]; if (!confirm(t.confirmDelete)) return;
-  if (sb && userId) { const { error } = await sb.from("hydration_logs").delete().eq("user_id", userId); if (error) { toast(t.syncError); return; } }
-  state.logs = []; render(); toast(t.deletedAll);
+  if(state.activeMode!=='water'||!confirm(T[state.lang].confirmDelete))return;
+  for(const item of state.logs)queueLog('water',item,true);
+  state.logs=[];saveLocal();render();toast(T[state.lang].deletedAll);
 }
-
 function urlBase64ToUint8Array(base64String) { const padding = "=".repeat((4 - base64String.length % 4) % 4); const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/"); const rawData = window.atob(base64); return Uint8Array.from([...rawData].map(char => char.charCodeAt(0))); }
 
 async function refreshPushState() {
@@ -471,39 +553,12 @@ async function refreshPushState() {
   } catch (e) { console.warn(e); }
 }
 
-async function enablePushReminders() {
-  const t = T[state.lang]; const status = $("pushStatus");
-  try {
-    if (!userId || !sb) { status.textContent = t.enableFirst; return false; }
-    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) { status.textContent = t.unsupported; return false; }
-    if (!C.VAPID_PUBLIC_KEY) { status.textContent = t.keyMissing; return false; }
-    const permission = await Notification.requestPermission(); if (permission !== "granted") { status.textContent = t.denied; return false; }
-    status.textContent = t.enabling; const registration = await navigator.serviceWorker.ready; let subscription = await registration.pushManager.getSubscription();
-    if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(C.VAPID_PUBLIC_KEY) });
-    const data = subscription.toJSON(); const { error } = await sb.from("push_subscriptions").upsert({ user_id: userId, endpoint: data.endpoint, p256dh: data.keys.p256dh, auth: data.keys.auth, updated_at: new Date().toISOString() }, { onConflict: "endpoint" }); if (error) throw error;
-    state.remindersEnabled = true; status.textContent = t.pushEnabled; renderSettings(); saveLocal(); toast(t.pushEnabled); return true;
-  } catch (error) { console.error(error); status.textContent = t.pushError; state.remindersEnabled = false; renderSettings(); return false; }
-}
-
-async function disablePushReminders() {
-  const t = T[state.lang];
-  try {
-    if ("serviceWorker" in navigator) { const registration = await navigator.serviceWorker.ready; const subscription = await registration.pushManager.getSubscription(); if (subscription) { const endpoint = subscription.endpoint; if (sb && userId) { try { await sb.from("push_subscriptions").delete().eq("user_id", userId).eq("endpoint", endpoint); } catch {} } await subscription.unsubscribe(); } }
-  } catch (e) { console.warn(e); }
-  state.remindersEnabled = false; setText("pushStatus", t.pushDisabled); renderSettings(); saveLocal(); toast(t.pushDisabled);
-}
-
 async function toggleReminderPush() {
-  if (state.activeMode !== "water") return;
-  if (DEMO) {
-    state.remindersEnabled = !state.remindersEnabled;
-    saveLocal(); renderSettings();
-    toast("Préférence de rappel simulée · aucun envoi réel");
-    return;
-  }
-  if (state.remindersEnabled) await disablePushReminders(); else await enablePushReminders();
+  if(state.activeMode!=='water')return;
+  state.remindersEnabled=!state.remindersEnabled;
+  queueSettings('water');saveLocal();renderSettings();
+  toast('Préférence enregistrée · notifications non actives dans cette version TEST');
 }
-
 function bind() {
   if (window.__bound) return; window.__bound = true;
   $("worldSwitchButton").onclick = toggleWorldMenu;
@@ -516,9 +571,19 @@ function bind() {
     if (!$("sodaSheet").classList.contains("hidden")) closeSodaSheet();
   });
   $("demoBtn").onclick = () => { $("auth").classList.add("hidden"); render(); };
-  $("loginBtn").onclick = async () => { const { error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value }); if (error) toast(error.message); };
-  $("signupBtn").onclick = async () => { const { error } = await sb.auth.signUp({ email: $("email").value.trim(), password: $("password").value }); if (error) toast(error.message); else toast("Compte créé. Vérifie l’e-mail si demandé."); };
-  $("logoutBtn").onclick = async () => { if (sb) await sb.auth.signOut(); location.reload(); };
+  $("loginBtn").onclick = async () => {
+    const button=$("loginBtn");button.disabled=true;setText('authStatus','Envoi du lien en cours…');
+    try {await window.TW_SYNC.sendMagicLink($("email").value.trim());
+      setText('authStatus','Vérifie tes e-mails. Ouvre le lien de connexion pour terminer.');}
+    catch(error){setText('authStatus','Connexion impossible : '+error.message);}
+    finally{button.disabled=false;}
+  };
+  $("logoutBtn").onclick = async () => {
+    if(pendingCount()){toast('Synchronise d’abord les modifications en attente avant de te déconnecter.');return;}
+    if(!navigator.onLine){toast('Reconnecte-toi à Internet avant de te déconnecter.');return;}
+    if(!confirm('Se déconnecter de 2LO TEST ? Les données de ce compte resteront sauvegardées sur cet appareil.'))return;
+    await window.TW_SYNC.signOut();location.reload();
+  };
   document.querySelectorAll(".quick").forEach(b => b.onclick = () => addWater(Number(b.dataset.ml)));
   document.querySelectorAll("[data-add-ml]").forEach(b => b.onclick = () => addWater(Number(b.dataset.addMl), customTimestampFromTime($("customTime").value)));
   $("addCustomBtn").onclick = () => { const amount = Number($("customMl").value); if (amount > 0) addWater(amount, customTimestampFromTime($("customTime").value)); else toast(T[state.lang].enterAmount); };
@@ -535,11 +600,7 @@ function bind() {
   $("resetTodayBtn").onclick = resetToday; $("deleteHistoryBtn").onclick = deleteAllHistory;
   bindSoda();
 
-  $("testPushBtn").onclick = async () => {
-    const t = T[state.lang];
-    try { if (DEMO) { toast("Démo locale : aucune notification réelle n'est envoyée"); return; } if (!sb || !userId) { toast(t.enableFirst); return; } toast(t.testSending); const { data, error } = await sb.functions.invoke("send-water-test"); if (error) throw error; toast(data?.delivered > 0 ? t.testSent : t.testNone); }
-    catch (error) { console.error("Push test error:", error); toast(t.testError); }
-  };
+  $("testPushBtn").onclick = () => toast('Les notifications seront activées après les tests de synchronisation.');
 }
 
 
@@ -708,20 +769,22 @@ function addSodaFromSheet() {
   if (state.activeMode === "water") return;
   const amount=Number($("sodaAmountInput").value), price=Number($("sodaPriceInput").value), ts=new Date($("sodaWhenInput").value).getTime();
   if (![330,500].includes(amount) || !Number.isFinite(price) || price<0 || price>999 || !Number.isFinite(ts) || ts>Date.now()+60000){toast("Vérifie la quantité, le prix et la date.");return;}
-  const item={id:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`, ml:amount,cents:Math.round(price*100),ts,day:key(new Date(ts))};
-  sodaStore().logs.push(item);saveLocal();closeSodaSheet();renderSoda();toast(`${fmtAmount(amount)} de ${sodaSelectedModeLabel()} enregistré`);
+  const item={id:makeUuid(), ml:amount,cents:Math.round(price*100),ts,day:key(new Date(ts))};
+  sodaStore().logs.push(item);queueLog(state.activeMode,item);saveLocal();closeSodaSheet();renderSoda();toast(`${fmtAmount(amount)} de ${sodaSelectedModeLabel()} enregistré`);
 }
 function saveSodaSettings() {
   if(state.activeMode==="water")return;
   const limit=Number($("sodaLimitInput").value),p330=Number($("sodaPrice330").value),p500=Number($("sodaPrice500").value);
   if(!Number.isInteger(limit)||limit<100||limit>20000||![p330,p500].every(p=>Number.isFinite(p)&&p>=0&&p<=999)) {toast("Vérifie les limites et les prix.");return;}
-  const d=sodaStore();d.limitMl=limit;d.prices={330:Math.round(p330*100),500:Math.round(p500*100)};saveLocal();renderSoda();toast("Réglages soda enregistrés");
+  const d=sodaStore();d.limitMl=limit;d.prices={330:Math.round(p330*100),500:Math.round(p500*100)};queueSettings(state.activeMode);saveLocal();renderSoda();toast("Réglages soda enregistrés");
 }
 function resetSoda(which) {
   if(state.activeMode==="water")return;
   const d=sodaStore(),prompt=which==="today"?`Effacer les prises de ${sodaSelectedModeLabel()} d’aujourd’hui ?`:`Effacer tout l’historique ${sodaSelectedModeLabel()} de cette démo ?`;
   if(!confirm(prompt))return;
-  if(which==="today")d.logs=d.logs.filter(l=>l.day!==key());else d.logs=[];
+  const selected=which==='today'?d.logs.filter(l=>l.day===key()):[...d.logs];
+  for(const item of selected)queueLog(state.activeMode,item,true);
+  if(which==='today')d.logs=d.logs.filter(l=>l.day!==key());else d.logs=[];
   saveLocal();renderSoda();toast("Consommations effacées");
 }
 function bindSoda() {
@@ -742,7 +805,7 @@ function bindSoda() {
   $("sodaHistoryPrev").onclick=()=>{historyMonthOffset--;const d=new Date();d.setMonth(d.getMonth()+historyMonthOffset,1);selectedHistoryKey=key(d);renderSodaHistory();};
   $("sodaHistoryNext").onclick=()=>{if(historyMonthOffset<0){historyMonthOffset++;selectedHistoryKey=historyMonthOffset===0?key():key(new Date(new Date().getFullYear(),new Date().getMonth()+historyMonthOffset,1,12));renderSodaHistory();}};
   $("sodaCalendar").onclick=e=>{const b=e.target.closest("[data-soda-day]");if(b){selectedHistoryKey=b.dataset.sodaDay;renderSodaHistory();}};
-  $("sodaDayItems").onclick=e=>{const b=e.target.closest("[data-delete-soda]");if(!b||state.activeMode==="water")return;const d=sodaStore(),item=d.logs.find(l=>l.id===b.dataset.deleteSoda);if(!item)return;if(!confirm("Supprimer cette consommation ?"))return;d.logs=d.logs.filter(l=>l.id!==item.id);saveLocal();renderSoda();};
+  $("sodaDayItems").onclick=e=>{const b=e.target.closest("[data-delete-soda]");if(!b||state.activeMode==="water")return;const d=sodaStore(),item=d.logs.find(l=>l.id===b.dataset.deleteSoda);if(!item)return;if(!confirm("Supprimer cette consommation ?"))return;d.logs=d.logs.filter(l=>l.id!==item.id);queueLog(state.activeMode,item,true);saveLocal();renderSoda();};
   $("sodaLastCard").onclick=()=>{historyMonthOffset=0;selectedHistoryKey=key();showScreen("history");};
 }
 
@@ -758,11 +821,15 @@ function refreshOnDayChange() {
 // Reduce visual work in hidden tabs and re-evaluate dates when the app returns to view.
 document.addEventListener("visibilitychange", () => {
   document.documentElement.dataset.pageHidden = String(document.hidden);
-  if (!document.hidden) refreshOnDayChange();
+  if (!document.hidden) {refreshOnDayChange();if(userId)scheduleSync();}
 });
 setInterval(refreshOnDayChange, 60000);
+// Foreground periodic reconciliation also catches updates from another signed-in device.
+setInterval(()=>{if(!document.hidden&&userId&&navigator.onLine)scheduleSync();},60000);
 setInterval(() => { if (document.hidden) return; if (state.activeMode === "water" && $("nextReminderRelative")) { const next = getNextReminderDate(); setText("nextReminderTime", formatTime(next.getTime())); setText("nextReminderRelative", relativeReminderText(next)); } }, 30000);
-window.addEventListener("online", async () => { if (sb && userId) { await loadCloud(); setSync("cloud"); render(); } }); window.addEventListener("offline", () => { setSync("offline"); renderSettings(); });
+window.addEventListener('online',()=>{scheduleSync();});
+window.addEventListener('offline',()=>{setSync('offline');renderSettings();});
+window.addEventListener('focus',()=>{if(userId)scheduleSync();});
 
 // V6.0 étape 6A — sur localhost également, tester le vrai service worker.
 // Utiliser le port 8016 pour séparer cette démo des anciennes versions.

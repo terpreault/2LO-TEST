@@ -6,7 +6,7 @@
   "display": "standalone",
   "background_color": "#F5FAFB",
   "theme_color": "#F5FAFB",
-  "description": "Version de test 2LO pour installation iPhone et essai sans connexion. Données fictives stockées sur cet appareil uniquement.",
+  "description": "Version 2LO TEST avec historique hors ligne et synchronisation Supabase des trois univers après connexion.",
   "icons": [
     {
       "src": "icons/icon-192.png",

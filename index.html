@@ -9,9 +9,9 @@
   <meta name="apple-mobile-web-app-title" content="2LO TEST">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=6010">
-  <script src="config.js?v=6010"></script>
-  <title>2LO TEST — Three Worlds V6.0.1</title>
+  <link rel="stylesheet" href="styles.css?v=6020">
+  <script src="config.js?v=6020"></script>
+  <title>2LO TEST — Three Worlds V6.0.2</title>
 </head>
 <body>
 
@@ -33,13 +33,15 @@
     <div id="configWarning" class="setup-warning hidden">Supabase n’est pas encore configuré. L’app fonctionne en mode local de démonstration.</div>
     <div class="form-grid" id="authFields">
       <div><label for="email">Adresse e-mail</label><input class="input" id="email" type="email" autocomplete="email"></div>
-      <div><label for="password">Mot de passe</label><input class="input" id="password" type="password" autocomplete="current-password"></div>
+      
     </div>
     <div class="auth-actions">
-      <button class="primary" id="loginBtn">Se connecter</button>
-      <button class="secondary" id="signupBtn">Créer le compte</button>
+      <button class="primary" id="loginBtn" type="button">Recevoir un lien de connexion</button>
+
       <button class="secondary hidden" id="demoBtn">Continuer en mode démo</button>
     </div>
+    <p id="authStatus" role="status" aria-live="polite" style="margin-top:12px"></p>
+    <p class="auth-hint">Connexion réservée à ton compte existant. Aucun nouveau compte créé.</p>
   </div>
 </div>
 
@@ -78,7 +80,7 @@
 
       <div class="home-heading">
         <div class="water-head-copy">
-          <span class="water-demo-badge">DÉMO V6.0.1 · STOCKAGE LOCAL</span>
+          <span class="water-demo-badge">2LO TEST V6.0.2 · HORS LIGNE</span>
           <h1>Water</h1>
           <p class="water-invitation">Reste hydraté, reste au top.</p>
         </div>
@@ -125,7 +127,7 @@
       </div>
 
       <div class="soda-view" id="sodaToday">
-        <header class="soda-heading"><span class="soda-demo-badge">DÉMO V6.0.1 · STOCKAGE LOCAL</span><h1 id="sodaName">Coca-Cola</h1><p>Moins de soda, à ton rythme.</p></header>
+        <header class="soda-heading"><span class="soda-demo-badge">2LO TEST V6.0.2 · HORS LIGNE</span><h1 id="sodaName">Coca-Cola</h1><p>Moins de soda, à ton rythme.</p></header>
         <div class="soda-gauge" id="sodaGauge">
           <div class="soda-gauge-inner">
             <div class="soda-liquid" id="sodaGaugeLiquid"><i></i><i></i><i></i></div>
@@ -297,7 +299,7 @@
 
       <section class="settings-group settings-data-card">
         <div class="settings-group-title"><span>▤</span><strong id="dataTitle">Données</strong></div>
-        <div class="settings-row static"><span id="syncLabel">Synchronisation</span><strong id="settingsSyncText">Local</strong></div>
+        <div class="settings-row static"><span id="syncLabel">Synchronisation</span><strong id="settingsSyncText">Local</strong></div><p class="settings-help" id="syncDetail" role="status" aria-live="polite"></p>
         <button class="action-row" id="resetTodayBtn" type="button"><span id="resetTodayLabel">Réinitialiser les données du jour</span><b>›</b></button>
         <button class="action-row danger" id="deleteHistoryBtn" type="button"><span id="deleteHistoryLabel">Supprimer tout l’historique</span><b>›</b></button>
       </section>
@@ -310,7 +312,7 @@
 
       <section class="settings-group about-group settings-about-card">
         <div class="settings-group-title"><span>ⓘ</span><strong id="aboutTitle">À propos</strong></div>
-        <div class="settings-row static"><span id="versionLabel">Version 6.0 (test hors ligne)</span><strong>2LO</strong></div>
+        <div class="settings-row static"><span id="versionLabel">Version 6.0.2 (synchronisation TEST)</span><strong>2LO</strong></div>
       </section>
 
       <div class="soda-view" id="sodaSettings">
@@ -336,8 +338,8 @@
           </div>
           <button type="button" class="soda-cta settings-cta" id="sodaSaveSettings">Enregistrer les réglages</button>
         </section>
-        <section class="soda-settings-card settings-data-card"><div class="settings-group-title"><span>▤</span><strong>Données de démonstration</strong></div><p class="settings-help">Stockées dans ce navigateur uniquement, sans Supabase.</p><button type="button" class="soda-quiet" id="sodaResetToday">Effacer les prises du jour</button><button type="button" class="soda-quiet soda-danger" id="sodaResetAll">Effacer tout l’historique de cette boisson</button></section>
-        <section class="soda-settings-card settings-about-card"><div class="settings-group-title"><span>ⓘ</span><strong>À propos</strong></div><div class="settings-compact-row"><span>Version</span><strong>2LO V6.0.1 · Jauges harmonisées</strong></div></section>
+        <section class="soda-settings-card settings-data-card"><div class="settings-group-title"><span>▤</span><strong>Données</strong></div><p class="settings-help">Enregistrées immédiatement sur cet appareil. Synchronisées avec Supabase après connexion, dès qu’Internet est disponible.</p><button type="button" class="soda-quiet" id="sodaResetToday">Effacer les prises du jour</button><button type="button" class="soda-quiet soda-danger" id="sodaResetAll">Effacer tout l’historique de cette boisson</button></section>
+        <section class="soda-settings-card settings-about-card"><div class="settings-group-title"><span>ⓘ</span><strong>À propos</strong></div><div class="settings-compact-row"><span>Version</span><strong>2LO V6.0.2 · Synchronisation TEST</strong></div></section>
       </div>
 
           <div class="world-placeholder" id="worldPlaceholderSettings" aria-live="polite"></div>
@@ -382,6 +384,7 @@
 </div></div>
 
 <div class="toast" id="toast"></div>
-<script src="app.js?v=6010"></script>
+<script src="sync.js?v=6020"></script>
+<script src="app.js?v=6020"></script>
 </body>
 </html>
