@@ -78,6 +78,30 @@
     }
     return current;
   }
+  async function signInWithPassword(email, password) {
+    if (!online()) throw new Error('Une connexion Internet est nécessaire pour se connecter.');
+    if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error('Saisis une adresse e-mail valide.');
+    if (!password) throw new Error('Saisis ton mot de passe.');
+    // Existing users only: a password sign-in never creates an account.
+    const r = await http('/auth/v1/token?grant_type=password', {
+      method: 'POST', body: { email, password }
+    });
+    if (!r?.access_token || !r?.refresh_token || !r?.user?.id)
+      throw new Error('Réponse de connexion incomplète.');
+    store({ access_token:r.access_token, refresh_token:r.refresh_token,
+      expires_at:Date.now()+(Number(r.expires_in)||3600)*1000, user:r.user });
+    return current;
+  }
+  async function updatePassword(password) {
+    if (!current?.user?.id) throw new Error('Connecte-toi avant de définir ton mot de passe.');
+    if (!online()) throw new Error('Une connexion Internet est nécessaire pour modifier ton mot de passe.');
+    if (typeof password !== 'string' || password.length < 12 || password.length > 128)
+      throw new Error('Utilise un mot de passe de 12 à 128 caractères.');
+    // GoTrue self-service change for the signed-in account; no admin key, no account creation.
+    await authenticated('/auth/v1/user', { method: 'PUT', body: { password } });
+    // Never persist the password in browser storage or in application data.
+    return true;
+  }
   async function sendMagicLink(email) {
     if (!online()) throw new Error('Une connexion Internet est nécessaire pour recevoir le lien.');
     if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error('Saisis une adresse e-mail valide.');
@@ -133,6 +157,6 @@
     if (!Array.isArray(settings)) throw new Error('Réponse de réglages invalide.');
     return {logs,settings};
   }
-  window.TW_SYNC = { configured:valid, bootstrap, sendMagicLink, signOut,
+  window.TW_SYNC = { configured:valid, bootstrap, sendMagicLink, signInWithPassword, updatePassword, signOut,
     push, pull, online, getUser:()=>current?.user||null, getAccessToken:token };
 })();

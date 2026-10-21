@@ -622,12 +622,64 @@ function bind() {
   });
   $("demoBtn").onclick = () => { $("auth").classList.add("hidden"); render(); };
   $("loginBtn").onclick = async () => {
-    const button=$("loginBtn");button.disabled=true;setText('authStatus','Envoi du lien en cours…');
-    try {await window.TW_SYNC.sendMagicLink($("email").value.trim());
-      setText('authStatus','Vérifie tes e-mails. Ouvre le lien de connexion pour terminer.');}
-    catch(error){setText('authStatus','Connexion impossible : '+error.message);}
-    finally{button.disabled=false;}
+    const button=$("loginBtn"), magic=$("magicLinkBtn"), pass=$("loginPassword");
+    button.disabled=true;magic.disabled=true;setText('authStatus','Connexion en cours…');
+    try {
+      const auth=await window.TW_SYNC.signInWithPassword($("email").value.trim(),pass.value);
+      pass.value='';setText('authStatus','');
+      await enterCloud(auth);
+    } catch(error) {
+      const msg=/invalid login credentials|invalid credentials/i.test(error.message)
+        ? 'Adresse e-mail ou mot de passe incorrect.' : error.message;
+      setText('authStatus','Connexion impossible : '+msg);
+    } finally {pass.value='';button.disabled=false;magic.disabled=false;}
   };
+  $("loginPassword").addEventListener('keydown', e => {
+    if (e.key === 'Enter') {e.preventDefault();if(!$("loginBtn").disabled)$("loginBtn").click();}
+  });
+  $("magicLinkBtn").onclick = async () => {
+    const button=$("magicLinkBtn"), signIn=$("loginBtn");
+    button.disabled=true;signIn.disabled=true;setText('authStatus','Envoi du lien en cours…');
+    try {await window.TW_SYNC.sendMagicLink($("email").value.trim());
+      setText('authStatus', 'Lien envoyé. Sur iPhone, ouvre-le dans Safari, puis définis ton mot de passe dans Réglages → Compte.');}
+    catch(error){setText('authStatus','Envoi impossible : '+error.message);}
+    finally{button.disabled=false;signIn.disabled=false;}
+  };
+  $("openPasswordForm").onclick = () => {
+    const panel=$("passwordManage"), open=panel.classList.contains('hidden');
+    panel.classList.toggle('hidden',!open);
+    $("openPasswordForm").setAttribute('aria-expanded', String(open));
+    setText('passwordStatus','');
+    if(open)$("newAccountPassword").focus();
+    else {$("newAccountPassword").value='';$("confirmAccountPassword").value='';}
+  };
+  $("cancelAccountPassword").onclick = () => {
+    $("passwordManage").classList.add('hidden');
+    $("openPasswordForm").setAttribute('aria-expanded','false');
+    $("newAccountPassword").value='';$("confirmAccountPassword").value='';
+    setText('passwordStatus','');
+  };
+  $("passwordManage").addEventListener('submit', async event => {
+    event.preventDefault();
+    const pwd=$("newAccountPassword"), check=$("confirmAccountPassword"), btn=$("saveAccountPassword");
+    if(pwd.value.length < 12 || pwd.value.length > 128) {
+      setText('passwordStatus','Choisis un mot de passe de 12 à 128 caractères.');return;
+    }
+    if(pwd.value !== check.value) {
+      setText('passwordStatus','Les deux mots de passe ne correspondent pas.');return;
+    }
+    if(!confirm('Tu modifies le mot de passe de ton compte Supabase EXISTANT. Cela peut aussi affecter la connexion à ton ancienne application. Continuer ?')) return;
+    btn.disabled=true;setText('passwordStatus','Enregistrement sécurisé en cours…');
+    try {
+      await window.TW_SYNC.updatePassword(pwd.value);
+      setText('passwordStatus','Mot de passe enregistré ! Tu peux maintenant ouvrir 2LO installée sur iPhone et te connecter directement.');
+      toast('Mot de passe du compte enregistré.');
+      pwd.value='';check.value='';
+    } catch(error) {
+      setText('passwordStatus','Impossible d’enregistrer : '+error.message);
+      pwd.value='';check.value='';
+    } finally {btn.disabled=false;}
+  });
   $("logoutBtn").onclick = async () => {
     if(pendingCount()){toast('Synchronise d’abord les modifications en attente avant de te déconnecter.');return;}
     if(!navigator.onLine){toast('Reconnecte-toi à Internet avant de te déconnecter.');return;}

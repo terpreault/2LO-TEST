@@ -1110,3 +1110,18 @@ html[data-page-hidden="true"] *::after {
 /* 2LO 6.0.3 — weekly notification choices share the existing world theme tokens */
 [data-screen="settings"] .tw-weekly-help{margin:4px 16px 12px;color:var(--settings-soft);font-size:11px;line-height:1.55}
 [data-screen="settings"] .settings-weekly-card .push-status{padding-top:0}
+
+/* 2LO V6.0.4 TEST — Connexion par mot de passe et gestion du compte existant. */
+.auth .auth-hint {font-size:11px;line-height:1.55;margin-top:14px;margin-bottom:0}
+.auth input[type="password"] {font-size:16px}
+.auth .auth-card {max-height:calc(100dvh - 35px);overflow:auto}
+.password-manage {margin:2px 14px 10px;padding:14px;border:1px solid rgba(255,255,255,.20);border-radius:14px;background:rgba(0,0,0,.10)}
+.password-manage p {font-size:12px;line-height:1.5;color:var(--settings-soft);margin:0 0 12px}
+.password-manage label {font-size:12px;margin:12px 0 5px;color:var(--settings-soft)}
+.password-manage input {font-size:16px;min-height:46px;background:#F8FBFB;color:#16445B}
+.password-actions {display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.password-actions button {min-height:43px;border-radius:11px;font-size:12px;padding:9px 12px;font-weight:800;cursor:pointer}
+.password-save {flex:2;border:0;background:var(--settings-accent,#20B6C7);color:#0A3147}
+.password-cancel {flex:1;background:transparent;color:var(--settings-soft);border:1px solid rgba(255,255,255,.3)}
+.password-actions button:disabled {opacity:.55;cursor:wait}
+#passwordStatus {margin:12px 0 0;font-size:12px}

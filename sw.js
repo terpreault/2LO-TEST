@@ -1,9 +1,9 @@
 /* 2LO V6.0 — étape 6A : coque PWA réellement disponible hors connexion.
    Synchronisation Supabase non mise en cache par le service worker. */
-const CACHE = '2lo-v6-0-iphone-test-6030';
+const CACHE = '2lo-v6-0-iphone-test-6040';
 const CORE = [
-  './', './index.html', './styles.css?v=6030', './app.js?v=6030',
-  './config.js?v=6030', './sync.js?v=6030', './notifications.js?v=6030', './manifest.json',
+  './', './index.html', './styles.css?v=6040', './app.js?v=6040',
+  './config.js?v=6040', './sync.js?v=6040', './notifications.js?v=6040', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png',
   './icons/icon-1024.png', './icons/apple-touch-icon.png',
   './icons/2LO-wordmark.png',

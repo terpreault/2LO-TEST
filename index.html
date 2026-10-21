@@ -9,9 +9,9 @@
   <meta name="apple-mobile-web-app-title" content="2LO TEST">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=6030">
-  <script src="config.js?v=6030"></script>
-  <title>2LO TEST — Three Worlds V6.0.3</title>
+  <link rel="stylesheet" href="styles.css?v=6040">
+  <script src="config.js?v=6040"></script>
+  <title>2LO TEST — Three Worlds V6.0.4</title>
 </head>
 <body>
 
@@ -32,16 +32,16 @@
     <p id="authIntro">Connecte-toi pour retrouver ton suivi d’hydratation sur tous tes appareils.</p>
     <div id="configWarning" class="setup-warning hidden">Supabase n’est pas encore configuré. L’app fonctionne en mode local de démonstration.</div>
     <div class="form-grid" id="authFields">
-      <div><label for="email">Adresse e-mail</label><input class="input" id="email" type="email" autocomplete="email"></div>
-      
+      <div><label for="email">Adresse e-mail</label><input class="input" id="email" type="email" autocomplete="username" inputmode="email" required></div>
+      <div><label for="loginPassword">Mot de passe</label><input class="input" id="loginPassword" type="password" autocomplete="current-password" placeholder="Mot de passe de ton compte" required></div>
     </div>
     <div class="auth-actions">
-      <button class="primary" id="loginBtn" type="button">Recevoir un lien de connexion</button>
-
-      <button class="secondary hidden" id="demoBtn">Continuer en mode démo</button>
+      <button class="primary" id="loginBtn" type="button">Se connecter</button>
+      <button class="secondary" id="magicLinkBtn" type="button">Recevoir un lien par e-mail</button>
+      <button class="secondary hidden" id="demoBtn" type="button">Continuer en mode démo</button>
     </div>
     <p id="authStatus" role="status" aria-live="polite" style="margin-top:12px"></p>
-    <p class="auth-hint">Connexion réservée à ton compte existant. Aucun nouveau compte créé.</p>
+    <p class="auth-hint">Sur iPhone, connecte-toi dans 2LO installée avec ton mot de passe. Les liens e-mail peuvent ouvrir Safari. Aucun compte supplémentaire n'est créé.</p>
   </div>
 </div>
 
@@ -80,7 +80,7 @@
 
       <div class="home-heading">
         <div class="water-head-copy">
-          <span class="water-demo-badge">2LO TEST V6.0.3 · HORS LIGNE</span>
+          <span class="water-demo-badge">2LO TEST V6.0.4 · HORS LIGNE</span>
           <h1>Water</h1>
           <p class="water-invitation">Reste hydraté, reste au top.</p>
         </div>
@@ -127,7 +127,7 @@
       </div>
 
       <div class="soda-view" id="sodaToday">
-        <header class="soda-heading"><span class="soda-demo-badge">2LO TEST V6.0.3 · HORS LIGNE</span><h1 id="sodaName">Coca-Cola</h1><p>Moins de soda, à ton rythme.</p></header>
+        <header class="soda-heading"><span class="soda-demo-badge">2LO TEST V6.0.4 · HORS LIGNE</span><h1 id="sodaName">Coca-Cola</h1><p>Moins de soda, à ton rythme.</p></header>
         <div class="soda-gauge" id="sodaGauge">
           <div class="soda-gauge-inner">
             <div class="soda-liquid" id="sodaGaugeLiquid"><i></i><i></i><i></i></div>
@@ -315,6 +315,19 @@
       <section class="settings-group settings-account-card">
         <div class="settings-group-title"><span>●</span><strong id="accountTitle">Compte</strong></div>
         <div class="settings-row static"><span id="accountEmail">—</span></div>
+        <button class="action-row" id="openPasswordForm" type="button" aria-expanded="false" aria-controls="passwordManage"><span>Définir ou modifier mon mot de passe</span><b>›</b></button>
+        <form class="password-manage hidden" id="passwordManage" autocomplete="off">
+          <p>Ce mot de passe sera défini sur ton compte Supabase existant. Il pourra également changer la façon de te connecter à l'ancienne application.</p>
+          <label for="newAccountPassword">Nouveau mot de passe (12 caractères minimum)</label>
+          <input class="input" id="newAccountPassword" name="new-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+          <label for="confirmAccountPassword">Confirmer le mot de passe</label>
+          <input class="input" id="confirmAccountPassword" name="confirm-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+          <div class="password-actions">
+            <button class="password-save" id="saveAccountPassword" type="submit">Enregistrer le mot de passe</button>
+            <button class="password-cancel" id="cancelAccountPassword" type="button">Annuler</button>
+          </div>
+          <p id="passwordStatus" role="status" aria-live="polite"></p>
+        </form>
         <button class="action-row" id="logoutBtn" type="button"><span id="logoutLabel">Déconnexion</span><b>›</b></button>
       </section>
 
@@ -356,7 +369,7 @@
         <p class="push-status" id="weeklyStatusSoda" role="status" aria-live="polite"></p>
       </section>
         <section class="soda-settings-card settings-data-card"><div class="settings-group-title"><span>▤</span><strong>Données</strong></div><p class="settings-help">Enregistrées immédiatement sur cet appareil. Synchronisées avec Supabase après connexion, dès qu’Internet est disponible.</p><button type="button" class="soda-quiet" id="sodaResetToday">Effacer les prises du jour</button><button type="button" class="soda-quiet soda-danger" id="sodaResetAll">Effacer tout l’historique de cette boisson</button></section>
-        <section class="soda-settings-card settings-about-card"><div class="settings-group-title"><span>ⓘ</span><strong>À propos</strong></div><div class="settings-compact-row"><span>Version</span><strong>2LO V6.0.3 · Notifications TEST</strong></div></section>
+        <section class="soda-settings-card settings-about-card"><div class="settings-group-title"><span>ⓘ</span><strong>À propos</strong></div><div class="settings-compact-row"><span>Version</span><strong>2LO V6.0.4 · Notifications TEST</strong></div></section>
       </div>
 
           <div class="world-placeholder" id="worldPlaceholderSettings" aria-live="polite"></div>
@@ -401,8 +414,8 @@
 </div></div>
 
 <div class="toast" id="toast"></div>
-<script src="sync.js?v=6030"></script>
-<script src="notifications.js?v=6030"></script>
-<script src="app.js?v=6030"></script>
+<script src="sync.js?v=6040"></script>
+<script src="notifications.js?v=6040"></script>
+<script src="app.js?v=6040"></script>
 </body>
 </html>

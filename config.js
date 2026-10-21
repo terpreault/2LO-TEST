@@ -1,4 +1,4 @@
-// 2LO TEST V6.0.3 — valeurs publiques uniquement, jamais de secret/service_role.
+// 2LO TEST V6.0.4 — valeurs publiques uniquement, jamais de secret/service_role.
 // Laisser vide pour garder le mode démo local sans communiquer avec Supabase.
 window.TWOLO_TEST_MODE = false;
 window.GASSIEN_CONFIG = {
