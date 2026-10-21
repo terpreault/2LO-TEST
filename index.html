@@ -9,9 +9,9 @@
   <meta name="apple-mobile-web-app-title" content="2LO TEST">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=6040">
-  <script src="config.js?v=6040"></script>
-  <title>2LO TEST — Three Worlds V6.0.4</title>
+  <link rel="stylesheet" href="styles.css?v=6050">
+  <script src="config.js?v=6050"></script>
+  <title>2LO TEST — Three Worlds V6.0.5</title>
 </head>
 <body>
 
@@ -80,7 +80,7 @@
 
       <div class="home-heading">
         <div class="water-head-copy">
-          <span class="water-demo-badge">2LO TEST V6.0.4 · HORS LIGNE</span>
+          <span class="water-demo-badge">2LO TEST V6.0.5 · HORS LIGNE</span>
           <h1>Water</h1>
           <p class="water-invitation">Reste hydraté, reste au top.</p>
         </div>
@@ -127,7 +127,7 @@
       </div>
 
       <div class="soda-view" id="sodaToday">
-        <header class="soda-heading"><span class="soda-demo-badge">2LO TEST V6.0.4 · HORS LIGNE</span><h1 id="sodaName">Coca-Cola</h1><p>Moins de soda, à ton rythme.</p></header>
+        <header class="soda-heading"><span class="soda-demo-badge">2LO TEST V6.0.5 · HORS LIGNE</span><h1 id="sodaName">Coca-Cola</h1><p>Moins de soda, à ton rythme.</p></header>
         <div class="soda-gauge" id="sodaGauge">
           <div class="soda-gauge-inner">
             <div class="soda-liquid" id="sodaGaugeLiquid"><i></i><i></i><i></i></div>
@@ -146,6 +146,11 @@
         <button class="soda-cta" id="sodaOpenSheet" type="button">＋ Ajouter une consommation</button>
         <div class="soda-info-grid"><article class="soda-info-card"><small>Dépensé aujourd’hui</small><strong id="sodaSpendToday">0,00 €</strong><em>Prix enregistré pour chaque prise</em></article><button class="soda-info-card soda-last" id="sodaLastCard" type="button"><small>Dernière prise</small><strong id="sodaLastAmount">—</strong><em id="sodaLastTime">Aucune prise</em></button></div>
       </div>
+
+      <section id="todayJournal" class="today-journal" aria-label="Consommations du jour">
+        <div class="today-journal-title"><strong>Prises d’aujourd’hui</strong><span id="todayJournalCount">0 prise</span></div>
+        <div id="todayJournalItems" class="today-journal-items"></div>
+      </section>
 
           <div class="world-placeholder" id="worldPlaceholderToday" aria-live="polite"></div>
     </section>
@@ -413,9 +418,30 @@
   <div class="soda-sheet-fields"><label for="sodaAmountInput">Quantité</label><select id="sodaAmountInput"><option value="330">330 ml</option><option value="500">500 ml</option></select><label for="sodaWhenInput">Date et heure</label><input id="sodaWhenInput" type="datetime-local"/><label for="sodaPriceInput">Prix de cette prise (€)</label><input id="sodaPriceInput" type="number" min="0" max="999" step="0.01" inputmode="decimal"/><button class="soda-cta" type="button" id="sodaSheetSave">Enregistrer la prise</button></div>
 </div></div>
 
+<div class="sheet-backdrop hidden" id="editIntakeSheet" aria-hidden="true">
+  <form class="sheet intake-edit-sheet" id="editIntakeForm" role="dialog" aria-modal="true" aria-labelledby="editIntakeTitle">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <button class="sheet-close" id="editIntakeClose" type="button" aria-label="Fermer">×</button>
+      <h2 id="editIntakeTitle">Modifier la consommation</h2><span></span>
+    </div>
+    <div class="intake-edit-fields">
+      <label for="editIntakeAmount">Quantité (ml)</label>
+      <input id="editIntakeAmount" type="number" inputmode="numeric" min="1" max="20000" step="1" required>
+      <label for="editIntakeWhen">Date et heure</label>
+      <input id="editIntakeWhen" type="datetime-local" required>
+      <div id="editIntakePriceRow">
+        <label for="editIntakePrice">Prix de cette prise (€)</label>
+        <input id="editIntakePrice" type="number" inputmode="decimal" min="0" max="999" step="0.01" required>
+      </div>
+      <button class="soda-cta" id="editIntakeSave" type="submit">Enregistrer la correction</button>
+    </div>
+  </form>
+</div>
+
 <div class="toast" id="toast"></div>
-<script src="sync.js?v=6040"></script>
-<script src="notifications.js?v=6040"></script>
-<script src="app.js?v=6040"></script>
+<script src="sync.js?v=6050"></script>
+<script src="notifications.js?v=6050"></script>
+<script src="app.js?v=6050"></script>
 </body>
 </html>

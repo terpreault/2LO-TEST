@@ -16,7 +16,7 @@ const T = {
     settings: "Réglages", settingsLead: "Personnalisez votre suivi", dailyGoal: "Objectif quotidien", customGoal: "Personnalisé",
     reminders: "Rappels", wake: "Heure de début", sleep: "Heure de fin", frequency: "Fréquence", saveReminders: "Enregistrer les rappels", testPush: "Envoyer une notification test",
     language: "Langue", data: "Données", sync: "Synchronisation", resetToday: "Réinitialiser les données du jour", deleteHistory: "Supprimer tout l’historique",
-    account: "Compte", logout: "Déconnexion", about: "À propos", version: "Version 6.0.3 (synchronisation TEST)", today: "Aujourd’hui", navProgress: "Progression", navHistory: "Historique", navSettings: "Réglages",
+    account: "Compte", logout: "Déconnexion", about: "À propos", version: "Version 6.0.5 (gestion des consommations TEST)", today: "Aujourd’hui", navProgress: "Progression", navHistory: "Historique", navSettings: "Réglages",
     cloud: "En ligne", local: "Local", offline: "Hors ligne", saved: "Réglages enregistrés", drank: "Tu as bu", deletedToday: "Données du jour réinitialisées", deletedAll: "Historique supprimé",
     authIntro: "Connecte-toi pour retrouver ton suivi d’hydratation sur tous tes appareils.",
     pushEnabled: "✓ Rappels activés", pushDisabled: "Rappels désactivés", enableFirst: "Connecte-toi d’abord.", unsupported: "Notifications non supportées sur cet appareil.", keyMissing: "Clé de notification manquante.", denied: "Notifications non autorisées.", enabling: "Activation en cours…", pushError: "Impossible d’activer les rappels.", testSending: "Envoi du test…", testSent: "Notification envoyée 💧", testNone: "Aucune notification envoyée", testError: "Erreur pendant le test",
@@ -352,6 +352,7 @@ function render() {
   if (state.activeMode === "water") {
     renderToday(); renderProgress(); renderHistory(); renderSettings();
   } else renderSoda();
+  renderTodayJournal();
   saveLocal();
   setSync(syncMode);
   renderNotificationChoices();
@@ -455,6 +456,115 @@ function renderProgress() {
   $("periodNext").disabled = progressOffset >= 0; $("periodNext").style.opacity = progressOffset >= 0 ? ".3" : "1";
 }
 
+
+// 2LO V6.0.5 — Édition et suppression individuelles, trois univers.
+// Le UUID de la prise est conservé lors d'une correction pour ne jamais créer de doublon.
+let editingIntake = null;
+function intakeList(mode) {
+  return mode === 'water' ? state.logs : sodaStore(mode).logs;
+}
+function intakeActions(mode, item) {
+  const actions = document.createElement('div');
+  actions.className = 'intake-actions';
+  const edit = document.createElement('button');
+  edit.type = 'button'; edit.className = 'intake-action';
+  edit.textContent = '✎'; edit.title = 'Modifier';
+  edit.setAttribute('aria-label', `Modifier la consommation de ${item.ml} ml à ${formatTime(item.ts)}`);
+  edit.dataset.editIntake = item.id; edit.dataset.intakeMode = mode;
+  const del = document.createElement('button');
+  del.type = 'button'; del.className = 'intake-action intake-action-danger';
+  del.textContent = '×'; del.title = 'Supprimer';
+  del.setAttribute('aria-label', `Supprimer la consommation de ${item.ml} ml à ${formatTime(item.ts)}`);
+  del.dataset.removeIntake = item.id; del.dataset.intakeMode = mode;
+  actions.append(edit, del);
+  return actions;
+}
+function intakeRow(mode, item, compact=false) {
+  const row = document.createElement('div');
+  row.className = compact ? 'intake-mini-row' : (mode === 'water' ? 'day-log-row intake-manage-row' : 'soda-log-row intake-manage-row');
+  const time = document.createElement('time'); time.textContent = formatTime(item.ts);
+  const amount = document.createElement('strong'); amount.textContent = `${item.ml} ml`;
+  row.append(time, amount);
+  if(mode !== 'water') {
+    const price = document.createElement('span'); price.className = 'intake-price';
+    price.textContent = money(item.cents || 0); row.append(price);
+  }
+  row.append(intakeActions(mode, item));
+  return row;
+}
+function renderTodayJournal() {
+  const mode = state.activeMode;
+  const items = intakeList(mode).filter(item => item.day === key()).sort((a,b) => b.ts - a.ts);
+  setText('todayJournalCount', `${items.length} prise${items.length>1?'s':''}`);
+  const holder = $('todayJournalItems'); holder.replaceChildren();
+  if (!items.length) {
+    const p=document.createElement('p'); p.className='intake-empty';
+    p.textContent='Aucune consommation enregistrée aujourd’hui.';holder.append(p);
+  } else {
+    const frag=document.createDocumentFragment();
+    items.forEach(item=>frag.append(intakeRow(mode,item,true)));
+    holder.append(frag);
+  }
+}
+function closeIntakeEditor() {
+  editingIntake = null;
+  $('editIntakeSheet').classList.add('hidden');
+  $('editIntakeSheet').setAttribute('aria-hidden','true');
+  $('editIntakeForm').reset();
+}
+function openIntakeEditor(mode,id) {
+  if(mode !== state.activeMode) return;
+  const item=intakeList(mode).find(x=>x.id===id);
+  if(!item)return toast('Cette consommation n’est plus disponible.');
+  editingIntake={mode,id};
+  setText('editIntakeTitle', `Modifier · ${WORLDS[mode].label}`);
+  $('editIntakeAmount').value = String(item.ml);
+  $('editIntakeWhen').value = toLocalDateInput(new Date(item.ts));
+  $('editIntakePriceRow').classList.toggle('hidden',mode==='water');
+  $('editIntakePrice').required = mode!=='water';
+  $('editIntakePrice').value = mode==='water' ? '' : (Number(item.cents||0)/100).toFixed(2);
+  $('editIntakeSheet').classList.remove('hidden');
+  $('editIntakeSheet').setAttribute('aria-hidden','false');
+  $('editIntakeAmount').focus();
+}
+function saveIntakeEdit(event) {
+  event.preventDefault();
+  if(!editingIntake)return;
+  const {mode,id}=editingIntake;
+  if(mode!==state.activeMode)return closeIntakeEditor();
+  const item=intakeList(mode).find(x=>x.id===id);
+  if(!item){closeIntakeEditor();return toast('Cette consommation n’existe plus.');}
+  const amount=Number($('editIntakeAmount').value);
+  const when=$('editIntakeWhen').value;
+  const ts=when ? new Date(when).getTime() : NaN;
+  const price=mode==='water'?0:Number($('editIntakePrice').value);
+  const validPrice=mode==='water'||(Number.isFinite(price)&&price>=0&&price<=999&&Math.round(price*100)<=99900);
+  if(!Number.isInteger(amount)||amount<1||amount>20000||!Number.isFinite(ts)||ts>Date.now()+60000||ts<946684800000||!validPrice) {
+    toast('Vérifie la quantité, la date et le prix.');return;
+  }
+  item.ml=amount;item.ts=ts;item.day=key(new Date(ts));
+  if(mode!=='water')item.cents=Math.round(price*100);
+  queueLog(mode,item);
+  saveLocal();closeIntakeEditor();render();toast('Consommation modifiée ✓');
+}
+function removeIntake(mode,id) {
+  if(mode!==state.activeMode)return;
+  const logs=intakeList(mode), item=logs.find(x=>x.id===id);
+  if(!item)return toast('Consommation introuvable.');
+  if(!confirm(`Supprimer cette consommation de ${item.ml} ml du ${new Date(item.ts).toLocaleDateString('fr-FR')} à ${formatTime(item.ts)} ?`))return;
+  // Tombstone Supabase : une suppression hors connexion ne ressuscite pas au retour du réseau.
+  if(mode==='water')state.logs=logs.filter(x=>x.id!==id);
+  else sodaStore(mode).logs=logs.filter(x=>x.id!==id);
+  queueLog(mode,item,true);
+  saveLocal();render();toast('Consommation supprimée');
+}
+function handleIntakeAction(event) {
+  const edit=event.target.closest('[data-edit-intake]');
+  if(edit){openIntakeEditor(edit.dataset.intakeMode,edit.dataset.editIntake);return;}
+  const remove=event.target.closest('[data-remove-intake]');
+  if(remove)removeIntake(remove.dataset.intakeMode,remove.dataset.removeIntake);
+}
+
 function renderHistory() {
   const t = T[state.lang]; const now = new Date(); const base = new Date(now.getFullYear(), now.getMonth() + historyMonthOffset, 1, 12);
   setText("historyMonthLabel", base.toLocaleDateString(locale(), { month: "long", year: "numeric" }));
@@ -486,7 +596,9 @@ function renderSelectedDay(t = T[state.lang]) {
   setText("waterDayStatus",label);
   $("waterDayStatus")?.classList.toggle("is-positive",logs.length>0&&total>=state.goal);
   $("dayScoreRing")?.style.setProperty("--score-pct", `${Math.min(100, pct)}%`);
-  $("selectedDayLogs").innerHTML = logs.length ? logs.map(x => `<div class="day-log-row"><span>▱</span><time>${formatTime(x.ts)}</time><strong>${x.ml} ml</strong></div>`).join("") : `<div class="empty-day">${t.noDayLogs}</div>`;
+  const container=$('selectedDayLogs');container.replaceChildren();
+  if(logs.length){logs.forEach(x=>container.append(intakeRow('water',x)));}
+  else {const empty=document.createElement('div');empty.className='empty-day';empty.textContent=t.noDayLogs;container.append(empty);}
 }
 
 function renderSettings() {
@@ -619,6 +731,7 @@ function bind() {
     closeWorldMenu();
     if (!$("addSheet").classList.contains("hidden")) closeAddSheet();
     if (!$("sodaSheet").classList.contains("hidden")) closeSodaSheet();
+    if (!$('editIntakeSheet').classList.contains('hidden')) closeIntakeEditor();
   });
   $("demoBtn").onclick = () => { $("auth").classList.add("hidden"); render(); };
   $("loginBtn").onclick = async () => {
@@ -694,6 +807,11 @@ function bind() {
   $("openAdd").onclick = openAddSheet; $("closeAdd").onclick = closeAddSheet; $("addSheet").addEventListener("click", e => { if (e.target === $("addSheet")) closeAddSheet(); });
   document.querySelectorAll(".nav-btn").forEach(b => b.onclick = () => showScreen(b.dataset.target)); document.querySelectorAll("[data-go-home]").forEach(b => b.onclick = () => showScreen("today")); document.querySelectorAll("[data-target-settings]").forEach(b => b.onclick = () => showScreen("settings"));
   $("lastDrinkCard").onclick = () => { selectedHistoryKey = key(); historyMonthOffset = 0; showScreen("history"); };
+  $('editIntakeClose').onclick=closeIntakeEditor;
+  $('editIntakeSheet').onclick=e=>{if(e.target===$('editIntakeSheet'))closeIntakeEditor();};
+  $('editIntakeForm').addEventListener('submit',saveIntakeEdit);
+  $('todayJournalItems').addEventListener('click',handleIntakeAction);
+  $('selectedDayLogs').addEventListener('click',handleIntakeAction);
   document.querySelectorAll(".segment").forEach(b => b.onclick = () => { progressPeriod = b.dataset.period; progressOffset = 0; renderProgress(); });
   $("periodPrev").onclick = () => { progressOffset--; renderProgress(); }; $("periodNext").onclick = () => { if (progressOffset < 0) progressOffset++; renderProgress(); };
   $("prevMonth").onclick = () => { historyMonthOffset--; const base = new Date(); base.setMonth(base.getMonth() + historyMonthOffset, 1); selectedHistoryKey = key(base); renderHistory(); };
@@ -855,14 +973,7 @@ function renderSodaHistory() {
   $("sodaDayStatus")?.classList.toggle("is-positive",items.length>0&&selectedMl<=d.limitMl);
   $("sodaDayItems").replaceChildren();
   if(!items.length){const p=document.createElement("p");p.className="soda-no-logs";p.textContent="Aucune consommation ce jour-là.";$("sodaDayItems").append(p);}
-  items.forEach(l=>{
-    const row=document.createElement("div");row.className="soda-log-row";
-    const time=document.createElement("span");time.textContent=formatTime(l.ts);
-    const qty=document.createElement("strong");qty.textContent=fmtAmount(l.ml);
-    const price=document.createElement("span");price.textContent=money(l.cents);
-    const del=document.createElement("button");del.type="button";del.className="soda-log-delete";del.dataset.deleteSoda=l.id;del.textContent="Supprimer";del.setAttribute("aria-label",`Supprimer la prise de ${formatTime(l.ts)}`);
-    row.append(time,qty,price,del);$("sodaDayItems").append(row);
-  });
+  items.forEach(l=>$('sodaDayItems').append(intakeRow(state.activeMode,l)));
 }
 function openSodaSheet(amount=330) {
   if (state.activeMode === "water") return;
@@ -878,7 +989,7 @@ function addSodaFromSheet() {
   const amount=Number($("sodaAmountInput").value), price=Number($("sodaPriceInput").value), ts=new Date($("sodaWhenInput").value).getTime();
   if (![330,500].includes(amount) || !Number.isFinite(price) || price<0 || price>999 || !Number.isFinite(ts) || ts>Date.now()+60000){toast("Vérifie la quantité, le prix et la date.");return;}
   const item={id:makeUuid(), ml:amount,cents:Math.round(price*100),ts,day:key(new Date(ts))};
-  sodaStore().logs.push(item);queueLog(state.activeMode,item);saveLocal();closeSodaSheet();renderSoda();toast(`${fmtAmount(amount)} de ${sodaSelectedModeLabel()} enregistré`);
+  sodaStore().logs.push(item);queueLog(state.activeMode,item);saveLocal();closeSodaSheet();render();toast(`${fmtAmount(amount)} de ${sodaSelectedModeLabel()} enregistré`);
 }
 function saveSodaSettings() {
   if(state.activeMode==="water")return;
@@ -893,7 +1004,7 @@ function resetSoda(which) {
   const selected=which==='today'?d.logs.filter(l=>l.day===key()):[...d.logs];
   for(const item of selected)queueLog(state.activeMode,item,true);
   if(which==='today')d.logs=d.logs.filter(l=>l.day!==key());else d.logs=[];
-  saveLocal();renderSoda();toast("Consommations effacées");
+  saveLocal();render();toast("Consommations effacées");
 }
 function bindSoda() {
   document.querySelectorAll("[data-soda-add]").forEach(b=>b.addEventListener("click",()=>openSodaSheet(Number(b.dataset.sodaAdd))));
@@ -913,7 +1024,7 @@ function bindSoda() {
   $("sodaHistoryPrev").onclick=()=>{historyMonthOffset--;const d=new Date();d.setMonth(d.getMonth()+historyMonthOffset,1);selectedHistoryKey=key(d);renderSodaHistory();};
   $("sodaHistoryNext").onclick=()=>{if(historyMonthOffset<0){historyMonthOffset++;selectedHistoryKey=historyMonthOffset===0?key():key(new Date(new Date().getFullYear(),new Date().getMonth()+historyMonthOffset,1,12));renderSodaHistory();}};
   $("sodaCalendar").onclick=e=>{const b=e.target.closest("[data-soda-day]");if(b){selectedHistoryKey=b.dataset.sodaDay;renderSodaHistory();}};
-  $("sodaDayItems").onclick=e=>{const b=e.target.closest("[data-delete-soda]");if(!b||state.activeMode==="water")return;const d=sodaStore(),item=d.logs.find(l=>l.id===b.dataset.deleteSoda);if(!item)return;if(!confirm("Supprimer cette consommation ?"))return;d.logs=d.logs.filter(l=>l.id!==item.id);queueLog(state.activeMode,item,true);saveLocal();renderSoda();};
+  $('sodaDayItems').onclick=handleIntakeAction;
   $("sodaLastCard").onclick=()=>{historyMonthOffset=0;selectedHistoryKey=key();showScreen("history");};
 }
 

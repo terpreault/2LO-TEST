@@ -1125,3 +1125,46 @@ html[data-page-hidden="true"] *::after {
 .password-cancel {flex:1;background:transparent;color:var(--settings-soft);border:1px solid rgba(255,255,255,.3)}
 .password-actions button:disabled {opacity:.55;cursor:wait}
 #passwordStatus {margin:12px 0 0;font-size:12px}
+
+/* 2LO V6.0.5 — contrôles discrets de modification / suppression (trois univers). */
+.today-journal{margin:14px 0 5px;padding:13px;border:1px solid rgba(116,201,212,.24);border-radius:17px;background:rgba(255,255,255,.82);box-shadow:0 8px 20px rgba(18,74,87,.06)}
+.today-journal-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;color:#205B6A;font-size:12px}
+.today-journal-title span{font-size:10px;font-weight:600;opacity:.72}
+.today-journal-items{max-height:210px;overflow-y:auto;overscroll-behavior:contain}
+.intake-mini-row{display:flex;gap:9px;align-items:center;padding:7px 2px;border-top:1px solid rgba(28,95,106,.1);color:#235F6C;min-height:43px;font-size:11px}
+.intake-mini-row time{min-width:46px;font-variant-numeric:tabular-nums;opacity:.75}
+.intake-mini-row strong{font-size:12px;flex:1}
+.intake-price{white-space:nowrap;font-size:10px;opacity:.85}
+.intake-actions{display:flex;gap:5px;justify-content:flex-end;flex:none;align-items:center}
+.intake-action{min-width:33px;min-height:33px;padding:0;display:grid;place-items:center;background:rgba(68,154,176,.12);border:1px solid rgba(114,196,211,.2);border-radius:10px;color:#247C8E;font-size:19px;font-weight:500;cursor:pointer}
+.intake-action-danger{background:rgba(255,126,110,.10);border-color:rgba(255,126,110,.24);color:#CB6159;font-size:23px}
+.intake-action:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.intake-manage-row{grid-template-columns:46px minmax(40px,1fr) auto!important;gap:8px!important;min-height:45px!important;height:auto!important}
+.soda-log-row.intake-manage-row{grid-template-columns:40px minmax(50px,1fr) auto auto!important}
+.intake-manage-row .intake-actions{grid-column:-2/-1}
+.intake-edit-sheet{max-height:90vh;overflow-y:auto}
+.intake-edit-fields{display:grid;gap:8px}
+.intake-edit-fields input{width:100%;min-height:43px;padding:10px 12px;border:1px solid #C9E4EA;border-radius:12px;background:#F8FBFC;color:#205866;font-size:14px}
+.intake-edit-fields label{font-size:11px;margin:3px 0 0}
+.intake-edit-fields #editIntakePriceRow{display:grid;gap:8px}
+.intake-edit-fields .soda-cta{margin-top:12px}
+.intake-empty{font-size:11px;padding:10px 0;color:#597C85}
+:root:not([data-mode="water"]) .today-journal{background:#1C171A;border-color:#40343A;box-shadow:0 10px 22px #0505063b}
+:root:not([data-mode="water"]) .today-journal-title,:root:not([data-mode="water"]) .intake-mini-row{color:#F3E9ED}
+:root:not([data-mode="water"]) .intake-mini-row{border-color:#44383D}
+:root:not([data-mode="water"]) .intake-action{background:#33252A;color:var(--world-accent);border-color:#5E444A}
+:root:not([data-mode="water"]) .intake-action-danger{color:#FDAAA3}
+:root:not([data-mode="water"]) .intake-empty{color:#B5A8AD}
+:root:not([data-mode="water"]) .intake-edit-sheet{background:#191417}
+:root:not([data-mode="water"]) .intake-edit-sheet h2,:root:not([data-mode="water"]) .intake-edit-sheet label{color:#F7ECEF}
+:root:not([data-mode="water"]) .intake-edit-fields input{background:#272024;border-color:#5A3D46;color:#F6EAED}
+:root:not([data-mode="water"]) .intake-edit-sheet .sheet-close{color:#F7ECEF}
+:root[data-mode="water"] .today-journal{background:rgba(10,66,90,.42);border-color:rgba(195,251,255,.24)}
+:root[data-mode="water"] .today-journal-title,:root[data-mode="water"] .intake-mini-row{color:#F3FBFF}
+:root[data-mode="water"] .intake-mini-row{border-color:rgba(195,251,255,.17)}
+:root[data-mode="water"] .intake-action{background:rgba(175,240,255,.15);border-color:rgba(175,240,255,.18);color:#D5F8FF}
+:root[data-mode="water"] .intake-action-danger{color:#FFCECB}
+:root[data-mode="water"] .intake-empty{color:#BCE8F7}
+@media(max-width:370px){.soda-log-row.intake-manage-row{gap:4px!important}.intake-action{min-width:30px;min-height:30px}}
+/* Le journal commun doit rester visible dans Coca-Cola et Monster malgré le masquage historique des panneaux Water. */
+:root:not([data-mode="water"]) [data-screen="today"] > .today-journal{display:block!important}
