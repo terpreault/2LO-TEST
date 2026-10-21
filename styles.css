@@ -1168,3 +1168,9 @@ html[data-page-hidden="true"] *::after {
 @media(max-width:370px){.soda-log-row.intake-manage-row{gap:4px!important}.intake-action{min-width:30px;min-height:30px}}
 /* Le journal commun doit rester visible dans Coca-Cola et Monster malgré le masquage historique des panneaux Water. */
 :root:not([data-mode="water"]) [data-screen="today"] > .today-journal{display:block!important}
+
+/* 2LO V6.0.5.1 — avoid iOS automatic input focus zoom in the edit sheet. */
+.intake-edit-sheet{max-height:90dvh;overscroll-behavior:contain}
+@media (hover:none) and (pointer:coarse) {
+  .intake-edit-fields input{font-size:16px!important;min-height:44px;-webkit-text-size-adjust:100%}
+}

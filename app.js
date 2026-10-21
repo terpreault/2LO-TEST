@@ -507,8 +507,11 @@ function renderTodayJournal() {
   }
 }
 function closeIntakeEditor() {
+  // Release mobile keyboard focus before hiding the sheet.
+  const sheet = $('editIntakeSheet');
+  if (sheet.contains(document.activeElement)) document.activeElement.blur();
   editingIntake = null;
-  $('editIntakeSheet').classList.add('hidden');
+  sheet.classList.add('hidden');
   $('editIntakeSheet').setAttribute('aria-hidden','true');
   $('editIntakeForm').reset();
 }
@@ -525,7 +528,10 @@ function openIntakeEditor(mode,id) {
   $('editIntakePrice').value = mode==='water' ? '' : (Number(item.cents||0)/100).toFixed(2);
   $('editIntakeSheet').classList.remove('hidden');
   $('editIntakeSheet').setAttribute('aria-hidden','false');
-  $('editIntakeAmount').focus();
+  // Only auto-focus on desktop. Mobile focus can trigger viewport zoom/keyboards.
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    $('editIntakeAmount').focus();
+  }
 }
 function saveIntakeEdit(event) {
   event.preventDefault();
